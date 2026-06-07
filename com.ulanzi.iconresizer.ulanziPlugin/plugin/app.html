@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="../libs/js/constants.js"></script>
+    <script src="../libs/js/eventEmitter.js"></script>
+    <script src="../libs/js/timers.js"></script>
+    <script src="../libs/js/utils.js"></script>
+    <script src="../libs/js/ulanziApi.js"></script>
+</head>
+<body>
+    <script>
+        $UD.connect('com.ulanzi.ulanzistudio.iconresizer');
+        
+        $UD.onConnected(() => {
+            console.log('IconResizer Main Service Connected to UlanziStudio');
+        });
+
+        // Quando o action é adicionado ou recarregado (ex: inicialização do software)
+        $UD.onAdd((message) => {
+            if (message.param) {
+                if (message.param.gifBase64) {
+                    $UD.setGifDataIcon(message.context, message.param.gifBase64);
+                } else if (message.param.base64) {
+                    $UD.setBaseDataIcon(message.context, message.param.base64);
+                }
+            }
+        });
+
+        // Quando as configurações são recebidas ou atualizadas
+        $UD.onDidReceiveSettings((message) => {
+            if (message.settings) {
+                if (message.settings.gifBase64) {
+                    $UD.setGifDataIcon(message.context, message.settings.gifBase64);
+                } else if (message.settings.base64) {
+                    $UD.setBaseDataIcon(message.context, message.settings.base64);
+                }
+            }
+        });
+
+        // Recebe comandos do Property Inspector para salvar ícones na biblioteca
+        $UD.onSendToPlugin((message) => {
+            $UD.logMessage('Main Service received sendToPlugin: ' + JSON.stringify(message ? message.payload ? message.payload.action : 'no payload' : 'no message'), 'info');
+            
+            if (message && message.payload && message.payload.action === 'saveIcon') {
+                saveIconToLibrary(message.payload.base64, message.payload.filename);
+            }
+        });
+
+        function saveIconToLibrary(base64Data, filename) {
+            $UD.logMessage('Tentando salvar ícone: ' + filename, 'info');
+            
+            // Abordagem 1: require direto
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                const homedir = require('os').homedir();
+                
+                const iconsDir = path.join(homedir, 'AppData', 'Roaming', 'Ulanzi', 'UlanziDeck', 'Icons', 'IconResizer');
+                
+                if (!fs.existsSync(iconsDir)) {
+                    fs.mkdirSync(iconsDir, { recursive: true });
+                }
+                
+                const buffer = Buffer.from(base64Data, 'base64');
+                fs.writeFileSync(path.join(iconsDir, filename), buffer);
+                
+                $UD.logMessage('Ícone salvo com sucesso: ' + filename, 'info');
+                $UD.toast("Salvo na biblioteca IconResizer!");
+                return;
+            } catch (e1) {
+                $UD.logMessage('require direto falhou: ' + e1.message, 'warn');
+            }
+
+            // Abordagem 2: window.require
+            try {
+                const fs = window.require('fs');
+                const path = window.require('path');
+                const homedir = window.require('os').homedir();
+                
+                const iconsDir = path.join(homedir, 'AppData', 'Roaming', 'Ulanzi', 'UlanziDeck', 'Icons', 'IconResizer');
+                
+                if (!fs.existsSync(iconsDir)) {
+                    fs.mkdirSync(iconsDir, { recursive: true });
+                }
+                
+                const buffer = Buffer.from(base64Data, 'base64');
+                fs.writeFileSync(path.join(iconsDir, filename), buffer);
+                
+                $UD.logMessage('Ícone salvo (window.require) com sucesso: ' + filename, 'info');
+                $UD.toast("Salvo na biblioteca IconResizer!");
+                return;
+            } catch (e2) {
+                $UD.logMessage('window.require falhou: ' + e2.message, 'warn');
+            }
+
+            // Abordagem 3: process.resourcesPath (Electron)
+            try {
+                if (typeof process !== 'undefined' && process.env) {
+                    const userProfile = process.env.USERPROFILE || process.env.HOME;
+                    const iconsDir = userProfile + '\\AppData\\Roaming\\Ulanzi\\UlanziDeck\\Icons\\IconResizer';
+                    
+                    const fs = require('fs');
+                    if (!fs.existsSync(iconsDir)) {
+                        fs.mkdirSync(iconsDir, { recursive: true });
+                    }
+                    
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    fs.writeFileSync(iconsDir + '\\' + filename, buffer);
+                    
+                    $UD.logMessage('Ícone salvo (process.env) com sucesso', 'info');
+                    $UD.toast("Salvo na biblioteca IconResizer!");
+                    return;
+                }
+            } catch (e3) {
+                $UD.logMessage('process.env falhou: ' + e3.message, 'warn');
+            }
+
+            // Se nada funcionou, registrar o problema
+            $UD.logMessage('Nenhum método de salvamento funcionou. O ambiente não permite acesso ao filesystem.', 'error');
+            $UD.toast("Ícone aplicado no botão! (Biblioteca indisponível)");
+        }
+
+        // Quando o botão é pressionado no hardware
+        $UD.onRun((message) => {
+            console.log('Action triggered:', message.context);
+            $UD.toast("Ícone carregado via IconResizer!");
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ulanzi D200H IconResizer - AI Generator</title>
+    <link rel="stylesheet" href="../libs/css/uspi.css">
+    <script src="../libs/js/constants.js"></script>
+    <script src="../libs/js/eventEmitter.js"></script>
+    <script src="../libs/js/timers.js"></script>
+    <script src="../libs/js/utils.js"></script>
+    <script src="../libs/js/ulanziApi.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #cfd6e2;
+            --accent-hover: #aeb7c4;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --msg-user: #cfd6e2;
+            --msg-ai: #334155;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: hidden;
+        }
+        .container {
+            width: 418px;
+            height: 160px;
+            margin-top: 2px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .restart-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .restart-btn:hover {
+            color: var(--text-main);
+            border-color: var(--accent);
+            background: rgba(200, 210, 224, 0.1);
+        }
+        
+        .chat-section {
+            flex: 1;
+            background: transparent;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            min-height: 0;
+        }
+        
+        /* Cropper CSS */
+        .cropper-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--card-bg); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+            padding: 4px 8px; box-sizing: border-box;
+        }
+        .cropper-box {
+            display: contents;
+        }
+        .cropper-box h3 {
+            display: none;
+        }
+        .cropper-area {
+            width: 100%; height: 98px; background: #000; border-radius: 4px; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; position: relative;
+        }
+        .cropper-frame {
+            border: 2px solid var(--accent); position: relative; overflow: hidden; cursor: grab;
+            display: flex; align-items: center; justify-content: center; border-radius: 8px;
+        }
+        .cropper-frame img {
+            position: absolute; transform-origin: center center;
+        }
+        .cropper-controls {
+            width: 100%; display: flex; align-items: center; gap: 8px; margin-top: 4px; height: 16px;
+        }
+        .cropper-controls input[type="range"] {
+            flex: 1; margin: 0;
+        }
+        .cropper-controls span {
+            font-size: 0.65rem; color: var(--text-muted); width: 30px; text-align: right;
+        }
+        .cropper-footer {
+            display: flex; width: 100%; gap: 6px; margin-top: 4px; height: 24px;
+        }
+        .cropper-footer button {
+            flex: 1; padding: 0; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.7rem; height: 24px;
+        }
+        .btn-cancel { background: var(--border); color: var(--text-main); }
+        .btn-cancel:hover { background: #4b5563; }
+        .btn-confirm { background: var(--accent); color: white; }
+        .btn-confirm:hover { background: var(--accent-hover); }
+
+        .msg {
+            max-width: 85%;
+            padding: 6px 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            line-height: 1.25;
+            word-wrap: break-word;
+        }
+        
+        .msg-user {
+            align-self: flex-end;
+            background: var(--msg-user);
+            color: var(--accent-ink);
+            border-bottom-right-radius: 2px;
+        }
+        
+        .msg-ai {
+            align-self: flex-start;
+            background: var(--msg-ai);
+            color: var(--text-main);
+            border-bottom-left-radius: 2px;
+        }
+        
+        .msg-img {
+            max-width: 100%;
+            max-height: 90px;
+            object-fit: contain;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+        .msg-img-clock {
+            aspect-ratio: 458 / 196;
+            background-color: #000;
+            width: 100%;
+            max-height: unset;
+        }
+        .msg-img:hover {
+            border-color: var(--accent);
+        }
+        
+        .input-section {
+            display: flex;
+            gap: 6px;
+            background: transparent;
+            border-top: 1px solid var(--border);
+            padding: 6px 8px;
+            align-items: center;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0 8px;
+            height: 26px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-family: inherit;
+            min-width: 0;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .send-btn {
+            background: var(--accent);
+            color: var(--accent-ink);
+            border: none;
+            border-radius: 4px;
+            height: 26px;
+            padding: 0 10px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .send-btn:hover { background: var(--accent-hover); }
+        .send-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+
+        .chat-choice-btn {
+            background: var(--bg-color);
+            color: var(--text-main);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-right: 4px;
+            margin-top: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .chat-choice-btn:hover {
+            background: var(--accent);
+            color: var(--accent-ink);
+        }
+        
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+            40% { color: white; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+            60% { text-shadow: .25em 0 0 white, .5em 0 0 rgba(0,0,0,0); }
+            80%, 100% { text-shadow: .25em 0 0 white, .5em 0 0 white; }
+        }
+
+        /* Novas telas (Seleção e Settings) */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 8px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .header-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            transition: color 0.2s;
+        }
+        .header-btn:hover { color: var(--text-main); }
+        
+        #selection-screen {
+            display: flex;
+            flex: 1;
+            padding: 10px;
+            gap: 8px;
+            justify-content: center;
+            align-items: stretch;
+            background: var(--card-bg);
+        }
+        .ai-card {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .ai-card:hover { border-color: var(--accent); }
+        .ai-card h3 { margin: 0 0 4px 0; font-size: 0.7rem; text-align: center; }
+        .ai-card p { margin: 0; font-size: 0.55rem; color: var(--text-muted); text-align: center; line-height: 1.2; }
+        .ai-card.disabled { opacity: 0.5; filter: grayscale(1); }
+        .ai-card.disabled:hover { opacity: 0.8; border-color: var(--text-muted); }
+        
+        .badge {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .badge-paid {
+            background-color: rgba(234, 67, 53, 0.15);
+            color: #ea4335;
+            border: 1px solid rgba(234, 67, 53, 0.3);
+        }
+        .badge-free {
+            background-color: rgba(0, 171, 107, 0.15);
+            color: #00ab6b;
+            border: 1px solid rgba(0, 171, 107, 0.3);
+        }
+        
+        .ai-gear {
+            position: absolute;
+            top: 4px; right: 4px;
+            color: var(--text-muted);
+        }
+        
+        #settings-modal {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--card-bg);
+            z-index: 10;
+            flex-direction: column;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .settings-content {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .settings-content label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px; display: block; }
+        .settings-content input {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            box-sizing: border-box;
+            margin-bottom: 8px;
+        }
+        .link-gen { font-size: 0.6rem; color: #3b82f6; text-decoration: none; }
+        .link-gen:hover { text-decoration: underline; }
+        
+        #chat-container { display: none; flex-direction: column; flex: 1; height: 100%; overflow: hidden; min-height: 0; }
+    
+        /* ── silver shimmer theme + accessibility helpers (injected) ── */
+        :root { --accent-ink:#0f172a; --silver-1:#9aa6b6; --silver-2:#ffffff; }
+        @keyframes silverShine { 0%{background-position:220% 0} 100%{background-position:-220% 0} }
+        .start-btn, button.start-btn {
+            background-image: linear-gradient(110deg, var(--silver-1) 0%, var(--silver-2) 45%, #cfd6e2 55%, var(--silver-1) 100%);
+            background-size: 220% 100%;
+            color: var(--accent-ink) !important;
+            border: none;
+            animation: silverShine 3.5s linear infinite;
+            box-shadow: 0 2px 10px rgba(207,214,226,0.18);
+        }
+        .start-btn.outline { background-image:none; background:transparent; color:var(--text-muted) !important; animation:none; box-shadow:none; }
+        .start-btn:hover { filter: brightness(1.06); }
+        .ui-hint {
+            display:inline-flex; align-items:center; gap:5px;
+            font-size:0.62rem; line-height:1.2; color:var(--text-muted);
+            background:rgba(255,255,255,0.05); border:1px solid var(--border);
+            border-radius:10px; padding:2px 8px; white-space:nowrap; user-select:none;
+        }
+        .ui-hint svg { width:11px; height:11px; opacity:.85; flex-shrink:0; }
+        .ui-hint b { color:var(--text-main); font-weight:600; }
+
+    
+        /*range-fix*/
+        input[type="range"]{-webkit-appearance:none;appearance:none;height:4px;background:var(--border);border-radius:3px;outline:none;}
+        input[type="range"]::-webkit-slider-runnable-track{height:4px;background:var(--border);border-radius:3px;}
+        input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;margin-top:-4.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--glow);border:none;cursor:pointer;}
+        input[type="range"]::-webkit-slider-thumb:hover{background:#ffffff;}
+        input[type="range"]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;}
+        input[type="range"]::-moz-range-track{height:4px;background:var(--border);border-radius:3px;}
+    
+        /*ai-thinking*/
+        @keyframes aiThink { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        @keyframes aiDots { 0%{content:''} 20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+        .ai-thinking{
+            display:inline-block; font-weight:600;
+            background-image:linear-gradient(90deg,#8b95a7 0%,#ffffff 25%,#cfd6e2 50%,#ffffff 75%,#8b95a7 100%);
+            background-size:200% 100%;
+            -webkit-background-clip:text; background-clip:text;
+            -webkit-text-fill-color:transparent; color:transparent;
+            animation:aiThink 1.8s linear infinite;
+        }
+        .ai-thinking-dots::after{ content:''; display:inline-block; width:1.1em; text-align:left; animation:aiDots 1.4s steps(1,end) infinite; color:#cfd6e2; font-weight:600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header" id="main-header">
+            <span id="header-title" data-localize="ai_main_title">Inteligência Artificial</span>
+            <button class="header-btn" id="settings-btn" onclick="openSettings()" title="Configurar APIs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+
+        <!-- Tela de Seleção -->
+        <div id="selection-screen">
+            <div class="ai-card" id="card-gemini" onclick="selectAI('gemini')">
+                <span class="badge badge-paid" data-localize="ai_badge_paid">Pago</span>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="url(#gemini-grad)" style="margin-bottom: 8px;">
+                  <defs>
+                    <linearGradient id="gemini-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#4285f4"/>
+                      <stop offset="50%" stop-color="#9b72cb"/>
+                      <stop offset="100%" stop-color="#d96570"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M12 0C12 6.62742 17.3726 12 24 12C17.3726 12 12 17.3726 12 24C12 17.3726 6.62742 12 0 12C6.62742 12 12 6.62742 12 0Z"/>
+                </svg>
+                <h3 data-localize="ai_card_gemini_title">Google Gemini</h3>
+                <p data-localize="ai_card_gemini_desc">Gera imagens fotorrealistas via Gemini 2.5/3.1.</p>
+            </div>
+            <div class="ai-card" id="card-pixabay" onclick="selectAI('pixabay')">
+                <span class="badge badge-free" data-localize="ai_badge_free">Grátis</span>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="margin-bottom: 8px;">
+                  <defs>
+                    <linearGradient id="pixabay-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#02d68f"/>
+                      <stop offset="100%" stop-color="#00ab6b"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="24" height="24" rx="6" fill="url(#pixabay-grad)" />
+                  <path d="M7 17V7h5c2.5 0 4 1.5 4 3.5S14.5 14 12 14H9v3H7zm2-4.5h3c1.2 0 2-.6 2-1.5s-.8-1.5-2-1.5H9v3z" fill="#ffffff" />
+                </svg>
+                <h3 data-localize="ai_card_pixabay_title">Banco de Imagens</h3>
+                <p data-localize="ai_card_pixabay_desc">Ícones gratuitos (Pixabay)</p>
+            </div>
+        </div>
+
+        <!-- Tela Iniciar Conversa -->
+        <div id="start-screen" style="display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; padding:10px; text-align:center; overflow-y:auto;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin-bottom:8px; flex-shrink:0;">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <h3 style="margin:0 0 4px 0; font-size:0.85rem;" data-localize="ai_start_title">Pronto para criar?</h3>
+            <p style="margin:0 0 10px 0; font-size:0.65rem; color:var(--text-muted); line-height:1.2;" data-localize="ai_start_desc">A inteligência artificial irá guiá-lo no processo de geração.</p>
+            <button class="send-btn" onclick="startConversation()" style="padding: 6px 16px; margin:0 auto; width:auto; flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <span data-localize="ai_start_btn">Iniciar Conversa</span>
+            </button>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal">
+            <div class="header">
+                <span data-localize="ai_settings_title">Configurar Chaves de API</span>
+                <button class="header-btn" onclick="closeSettings()"><span aria-hidden="true">&times;</span> <span data-localize="ai_settings_close">Fechar</span></button>
+            </div>
+            <div class="settings-content">
+                <div style="margin-bottom:12px;">
+                    <label><span data-localize="ai_settings_gemini_key">Google Gemini API Key</span> <a href="#" onclick="openExternalUrl('https://aistudio.google.com/app/apikey'); return false;" class="link-gen" data-localize="ai_settings_get_key">Pegar chave</a></label>
+                    <input type="password" id="key-gemini" placeholder="AIzaSy...">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label data-localize="ai_settings_gemini_model">Modelo do Gemini</label>
+                    <select id="model-gemini" style="width:100%; background:var(--bg-color); border:1px solid var(--border); color:var(--text-main); padding:6px; border-radius:4px; font-size:0.7rem; outline:none;">
+                        <option value="gemini-2.5-flash-image">gemini-2.5-flash-image</option>
+                        <option value="gemini-3.1-flash-image">gemini-3.1-flash-image</option>
+                    </select>
+                </div>
+                <button class="send-btn" style="width:100%;" onclick="saveKeys()" data-localize="ai_settings_save">Salvar e Voltar</button>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chat-container">
+            <div class="chat-section" id="chat-box">
+                <!-- Dynamically populated -->
+            </div>
+            <!-- Input Area -->
+            <div class="input-section">
+                <button class="restart-btn" onclick="backToSelection()" title="Voltar para Seleção">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <input type="text" id="prompt-input" data-localize="ai_placeholder" placeholder="A futuristic neon robot..." onkeypress="handleKey(event)">
+                <button class="send-btn" id="btn-send" onclick="sendPrompt()" data-localize="ai_btn_send">Send</button>
+            </div>
+    <!-- Cropper Modal moved inside container -->
+    <div id="cropper-modal" class="cropper-overlay" style="display:none;">
+        <div class="cropper-box">
+            <h3 data-localize="cropper_title">Ajustar Enquadramento</h3>
+            <div class="cropper-area" id="cropper-area">
+                <div class="cropper-frame" id="cropper-frame">
+                    <img id="cropper-img" src="" draggable="false">
+                </div>
+        <div class="ui-hint" style="margin-bottom:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg><span data-localize="hint_cropper">Arraste para mover • use o slider para zoom</span></div>
+            </div>
+            <div class="cropper-controls">
+                <input type="range" id="cropper-scale-slider" min="0.5" max="3" step="0.05" value="1">
+                <span id="cropper-scale-val">100%</span>
+            </div>
+            <div class="cropper-footer">
+                <button class="btn-cancel" onclick="closeCropper(false)" data-localize="btn_cancel">Cancelar</button>
+                <button class="btn-confirm" onclick="closeCropper(true)" data-localize="btn_confirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Canvas for processing -->
+    <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+    <script src="../ws-port.js"></script>
+    <script>
+        const AVAILABLE_LANGS = ['en', 'pt', 'es', 'fr', 'de', 'zh', 'ja', 'ko', 'zh_TW'];
+        let currentLocale = {};
+        let currentLangCode = 'en';
+        
+        let actionContext = null;
+        let currentRes = 'std';
+        let selectedAIEngine = null;
+        let apiKeys = {
+            gemini: localStorage.getItem('ulanzi_key_gemini') || '',
+            gemini_model: localStorage.getItem('ulanzi_model_gemini') || 'gemini-2.5-flash-image'
+        };
+        
+        // Mock translation logic
+        async function loadAndApplyLocalization() {
+            currentLangCode = detectLanguage();
+            try {
+                const resp = await fetch(`../${currentLangCode}.json`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                currentLocale = json.Localization || {};
+            } catch (e) {
+                try {
+                    const resp = await fetch(`../en.json`);
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        currentLocale = json.Localization || {};
+                    }
+                } catch (e2) {
+                    currentLocale = {};
+                }
+            }
+            applyLocalization();
+        }
+
+        function resolveLanguageCode(rawLang) {
+            if (!rawLang) return 'en';
+            const lowerLang = rawLang.toLowerCase();
+            if (lowerLang === 'zh-tw' || lowerLang === 'zh_tw' || lowerLang === 'zh-hk' || lowerLang === 'zh_hk') return 'zh_TW';
+            const normalized = lowerLang.replace(/[-_].*$/, '');
+            if (AVAILABLE_LANGS.includes(normalized)) return normalized;
+            return 'en';
+        }
+
+        function detectLanguage() {
+            const params = new URLSearchParams(window.location.search);
+            const sdkLang = params.get('language');
+            if (sdkLang) return resolveLanguageCode(sdkLang);
+            const browserLang = navigator.languages && navigator.languages.length ? navigator.languages[0] : (navigator.language || navigator.userLanguage);
+            return resolveLanguageCode(browserLang);
+        }
+
+        function applyLocalization() {
+            document.querySelectorAll('[data-localize]').forEach(el => {
+                const key = el.dataset.localize;
+                if (!key || !currentLocale[key]) return;
+                if (el.placeholder && el.placeholder.length) {
+                    el.placeholder = currentLocale[key];
+                } else if (el.tagName === 'INPUT') {
+                    // skip
+                } else {
+                    el.textContent = currentLocale[key];
+                }
+            });
+            const restartBtn = document.querySelector('.restart-btn');
+            if (restartBtn) restartBtn.title = t('ai_restart_tooltip') || '';
+            const settingsBtn = document.getElementById('settings-btn');
+            if (settingsBtn) settingsBtn.title = t('ai_settings_title') || 'Configurar APIs';
+        }
+
+        function t(key) {
+            const val = currentLocale && currentLocale[key];
+            if (typeof val === 'object' && val !== null) {
+                // Return language‑specific tooltip if available
+                return val[currentLangCode] || Object.values(val)[0];
+            }
+            return val || key;
+        }
+
+        function addMessage(text, sender) {
+            const chatBox = document.getElementById('chat-box');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg msg-${sender}`;
+            msgDiv.innerText = text;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return msgDiv;
+        }
+        
+        async function addMessageDelayed(text, sender, delay = 800) {
+            if (sender === 'ai') {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'msg msg-ai';
+                typingDiv.innerHTML = `<span class="ai-thinking">${t('ai_typing') || 'Digitando'}</span><span class="ai-thinking-dots"></span>`;
+                const chatBox = document.getElementById('chat-box');
+                chatBox.appendChild(typingDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                
+                await new Promise(r => setTimeout(r, delay));
+                typingDiv.remove();
+            }
+            return addMessage(text, sender);
+        }
+
+        async function restartChat() {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';
+            document.getElementById('prompt-input').disabled = true;
+            document.getElementById('btn-send').disabled = true;
+            
+            const hour = new Date().getHours();
+            let greetingKey = 'ai_greeting_morning';
+            if (hour >= 12 && hour < 18) greetingKey = 'ai_greeting_afternoon';
+            else if (hour >= 18 || hour < 5) greetingKey = 'ai_greeting_evening';
+            
+            const greetingText = t(greetingKey) || 'Hello';
+            const welcomeText = t('ai_welcome') || 'Shall we customize your Ulanzi stream deck today? Which key size do you want, Standard or Clock?';
+            
+            let fullMessage = `${greetingText}! ${welcomeText}`;
+            if (currentLangCode === 'es') fullMessage = `¡${greetingText}! ${welcomeText}`;
+            else if (['ja', 'zh', 'zh_TW'].includes(currentLangCode)) fullMessage = `${greetingText}！${welcomeText}`;
+            
+            const msgDiv = await addMessageDelayed(fullMessage, 'ai', 1000);
+            const btnStd = document.createElement('button');
+            btnStd.className = 'chat-choice-btn';
+            btnStd.innerText = t('ai_btn_std') || 'Standard';
+            btnStd.onclick = () => chooseRes('std', btnStd.innerText);
+            
+            const btnClock = document.createElement('button');
+            btnClock.className = 'chat-choice-btn';
+            btnClock.innerText = t('ai_btn_clock') || 'Clock';
+            btnClock.onclick = () => chooseRes('clock', btnClock.innerText);
+            
+            msgDiv.appendChild(document.createElement('br'));
+            msgDiv.appendChild(btnStd);
+            msgDiv.appendChild(btnClock);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function chooseRes(res, btnText) {
+            currentRes = res;
+            addMessage(btnText, 'user');
+            
+            const buttons = document.querySelectorAll('.chat-choice-btn');
+            buttons.forEach(b => b.remove());
+            
+            const promptText = selectedAIEngine === 'pixabay' 
+                ? (t('ai_pixabay_welcome') || 'O que você deseja buscar no banco de imagens hoje?')
+                : (t('ai_ask_prompt') || "Great! Describe the icon you want.");
+            
+            await addMessageDelayed(promptText, 'ai', 800);
+            
+            document.getElementById('prompt-input').disabled = false;
+            document.getElementById('btn-send').disabled = false;
+            document.getElementById('prompt-input').focus();
+        };
+
+        function updateCardsUI() {
+            ['gemini'].forEach(ai => {
+                const card = document.getElementById(`card-${ai}`);
+                if (apiKeys[ai] && apiKeys[ai].trim().length > 5) {
+                    card.classList.remove('disabled');
+                } else {
+                    card.classList.add('disabled');
+                }
+            });
+        }
+
+        function openSettings() {
+            document.getElementById('key-gemini').value = apiKeys.gemini;
+            document.getElementById('model-gemini').value = apiKeys.gemini_model;
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function saveKeys() {
+            apiKeys.gemini = document.getElementById('key-gemini').value.trim();
+            apiKeys.gemini_model = document.getElementById('model-gemini').value;
+            
+            localStorage.setItem('ulanzi_key_gemini', apiKeys.gemini);
+            localStorage.setItem('ulanzi_model_gemini', apiKeys.gemini_model);
+            
+            // Salvar no Ulanzi permanentemente
+            if (typeof $UD !== 'undefined' && $UD.setGlobalSettings) {
+                $UD.setGlobalSettings({ apiKeys: apiKeys });
+            }
+            
+            updateCardsUI();
+            closeSettings();
+        }
+
+        function selectAI(ai) {
+            if (ai !== 'pixabay' && (!apiKeys[ai] || apiKeys[ai].trim().length < 5)) {
+                openSettings();
+                return;
+            }
+            selectedAIEngine = ai;
+            document.getElementById('selection-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'flex';
+            document.getElementById('main-header').style.display = 'none';
+            if (ai === 'pixabay') {
+                document.getElementById('header-title').innerText = t('ai_card_pixabay_title') || 'Pixabay';
+            } else {
+                document.getElementById('header-title').innerText = t('ai_header_gemini') || 'IA: GEMINI';
+            }
+        }
+
+        function startConversation() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'flex';
+            document.getElementById('main-header').style.display = 'flex';
+            restartChat();
+        }
+
+        function backToSelection() {
+            document.getElementById('selection-screen').style.display = 'flex';
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'none';
+            document.getElementById('main-header').style.display = 'flex';
+            document.getElementById('header-title').innerText = 'Inteligência Artificial';
+        }
+
+        function openExternalUrl(url) {
+            if (typeof $UD !== 'undefined' && $UD.openUrl) {
+                $UD.openUrl(url);
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+
+
+
+        if (typeof $UD !== 'undefined') {
+            $UD.connect('com.ulanzi.ulanzistudio.iconresizer.ai');
+            $UD.onAdd((m) => { actionContext = m.context; if ($UD.getGlobalSettings) $UD.getGlobalSettings(); });
+            $UD.onParamFromApp((m) => { actionContext = m.context; if ($UD.getGlobalSettings) $UD.getGlobalSettings(); });
+            
+            if ($UD.onConnected) {
+                $UD.onConnected(() => {
+                    if ($UD.getGlobalSettings) $UD.getGlobalSettings();
+                });
+            }
+            
+            if ($UD.onDidReceiveGlobalSettings) {
+                $UD.onDidReceiveGlobalSettings((payload) => {
+                    const settings = payload.payload?.settings || payload.settings;
+                    if (settings && settings.apiKeys) {
+                        apiKeys.gemini = settings.apiKeys.gemini || apiKeys.gemini;
+                        apiKeys.gemini_model = settings.apiKeys.gemini_model || apiKeys.gemini_model;
+                        
+                        localStorage.setItem('ulanzi_key_gemini', apiKeys.gemini);
+                        localStorage.setItem('ulanzi_model_gemini', apiKeys.gemini_model);
+                        updateCardsUI();
+                    }
+                });
+            }
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter') sendPrompt();
+        }
+
+        function addMessage(text, type, imgBase64 = null) {
+            const chatBox = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg msg-${type}`;
+            if (text) {
+                div.innerHTML = text;
+            }
+            if (imgBase64) {
+                const img = document.createElement('img');
+                img.className = 'msg-img';
+                if (currentRes === 'clock') {
+                    img.classList.add('msg-img-clock');
+                }
+                img.src = imgBase64;
+                img.title = 'Click to send to Ulanzi Deck';
+                img.onclick = () => saveImageToDeck(imgBase64);
+                div.appendChild(img);
+            }
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return div;
+        }
+
+        // One gtx call for a given source language. Returns English output plus
+        // the detected source language + confidence (meaningful only when sl='auto').
+        async function gtxTranslate(text, sl) {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+            const r = await fetch(url);
+            const j = await r.json();
+            return {
+                out: (j[0] || []).map(s => s[0]).join('').trim(),
+                det: j[2],
+                conf: j[6]
+            };
+        }
+
+        // Translate ANY language → English (Pixabay matches English tags best),
+        // independent of the UI language. gtx auto-detect is unreliable on short
+        // single words (e.g. "bola" → Slovak), so: (1) trust auto only when confident;
+        // (2) otherwise probe a priority list of languages and take the first real
+        // translation; (3) keep genuine English as-is. (Gemini handles any language.)
+        async function translateToEn(text) {
+            try {
+                const lc = text.toLowerCase();
+                const a = await gtxTranslate(text, 'auto');
+                if (a.det === 'en' && a.conf >= 0.8) return text;
+                if (a.det && a.det !== 'en' && a.conf >= 0.7 && a.out && a.out.toLowerCase() !== lc) {
+                    return a.out;
+                }
+                const uiSl = ({ zh: 'zh-CN', zh_TW: 'zh-TW' })[currentLangCode] || currentLangCode;
+                const order = [];
+                const push = l => { if (l && l !== 'en' && !order.includes(l)) order.push(l); };
+                push(uiSl);
+                ['pt', 'es', 'fr', 'de', 'it', 'ru', 'ja', 'ko', 'zh-CN'].forEach(push);
+                for (const sl of order) {
+                    const r = await gtxTranslate(text, sl);
+                    if (r.out && r.out.toLowerCase() !== lc) return r.out;
+                }
+                return a.out || text;
+            } catch (e) { return text; }
+        }
+
+        async function sendPrompt() {
+            const input = document.getElementById('prompt-input');
+            const btn = document.getElementById('btn-send');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            // Add user message
+            addMessage(prompt, 'user');
+            input.value = '';
+            btn.disabled = true;
+
+            // Add AI loading
+            const generatingTxt = selectedAIEngine === 'pixabay' ? (t('ai_pixabay_searching') || 'Buscando opções') : (t('ai_generating') || 'Generating');
+            const loadingMsg = addMessage(`<span class="ai-thinking">${generatingTxt}</span><span class="ai-thinking-dots"></span>`, 'ai');
+
+            try {
+                if (selectedAIEngine === 'pixabay') {
+                    // Always translate to English (any language); Gemini branch is untouched.
+                    let pxTerm = (await translateToEn(prompt)).toLowerCase() || prompt;
+                    const url = `https://pixabay.com/api/?key=45486654-5ec0ed7f2258de774b43fe839&q=${encodeURIComponent(pxTerm)}&image_type=illustration&per_page=5`;
+                    const resp = await fetch(url);
+                    if (resp.status === 429) {
+                        throw new Error(t('ai_pixabay_ratelimit') || "Muitas buscas no momento. Por favor, aguarde 1 minuto e tente novamente.");
+                    }
+                    if (!resp.ok) throw new Error("Erro na busca do Pixabay");
+                    const data = await resp.json();
+                    
+                    if (!data.hits || data.hits.length === 0) {
+                        throw new Error(t('ai_pixabay_no_results') || "Não encontrei resultados para isso. Tente outra palavra.");
+                    }
+
+                    const chatBox = document.getElementById('chat-box');
+                    chatBox.removeChild(loadingMsg);
+
+                    const div = document.createElement('div');
+                    div.className = `msg msg-ai`;
+                    div.innerHTML = t('ai_pixabay_results') || "Encontrei estas opções. Clique na que preferir:";
+                    
+                    const gallery = document.createElement('div');
+                    gallery.style.display = 'flex';
+                    gallery.style.gap = '4px';
+                    gallery.style.marginTop = '6px';
+                    
+                    data.hits.forEach(hit => {
+                        const img = document.createElement('img');
+                        img.src = hit.previewURL;
+                        img.style.width = '60px';
+                        img.style.height = '60px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '4px';
+                        img.style.cursor = 'pointer';
+                        img.title = 'Click to send to Ulanzi Deck';
+                        img.onclick = async () => {
+                            const downloadingTxt = t('ai_pixabay_downloading') || "Baixando imagem selecionada";
+                            const dlMsg = addMessage(`<span class="ai-thinking">${downloadingTxt}</span><span class="ai-thinking-dots"></span>`, 'ai');
+                            try {
+                                const imgResp = await fetch(hit.webformatURL);
+                                const blob = await imgResp.blob();
+                                const base64 = await new Promise(r => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+                                saveImageToDeck(base64);
+                                chatBox.removeChild(dlMsg);
+                            } catch (e) {
+                                chatBox.removeChild(dlMsg);
+                                console.error(e);
+                            }
+                        };
+                        gallery.appendChild(img);
+                    });
+                    div.appendChild(gallery);
+                    chatBox.appendChild(div);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    return;
+                }
+
+                const tw = currentRes === 'clock' ? 458 : 144;
+                const th = currentRes === 'clock' ? 196 : 144;
+                let base64 = "";
+
+                if (selectedAIEngine === 'gemini') {
+                    // Endpoint Gemini Image Generation
+                    let url = `https://generativelanguage.googleapis.com/v1beta/models/${apiKeys.gemini_model}:generateContent?key=${apiKeys.gemini}`;
+                    let resp = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }]
+                        })
+                    });
+                    let data = await resp.json();
+                    
+                    // Fallback para predict caso a V1Beta reclame do formato
+                    if (!resp.ok && data.error && data.error.message.includes("predict")) {
+                        url = `https://generativelanguage.googleapis.com/v1beta/models/${apiKeys.gemini_model}:predict?key=${apiKeys.gemini}`;
+                        resp = await fetch(url, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                instances: [{ prompt: prompt }],
+                                parameters: { sampleCount: 1 }
+                            })
+                        });
+                        data = await resp.json();
+                    }
+
+                    if (!resp.ok) {
+                        throw new Error(`Erro Gemini Image: ${resp.status} - ${data.error?.message || 'Falha ao gerar imagem'}`);
+                    }
+                    
+                    // Extrair imagem real em pixels (Base64)
+                    let foundImage = false;
+                    
+                    if (data.candidates && data.candidates[0]?.content?.parts) {
+                        for (const part of data.candidates[0].content.parts) {
+                            // Verifica se veio embutido em Base64 nativo
+                            if (part.inlineData) {
+                                const mime = part.inlineData.mimeType;
+                                const b64 = part.inlineData.data;
+                                base64 = `data:${mime};base64,${b64}`;
+                                foundImage = true;
+                                break;
+                            }
+                            // Verifica se ele retornou um link de imagem markdown no texto
+                            if (part.text && part.text.match(/!\[.*?\]\((https:\/\/[^\s\)]+)\)/)) {
+                                const imgUrl = part.text.match(/!\[.*?\]\((https:\/\/[^\s\)]+)\)/)[1];
+                                const imgResp = await fetch(imgUrl);
+                                if (imgResp.ok) {
+                                    const blob = await imgResp.blob();
+                                    base64 = await new Promise(r => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+                                    foundImage = true;
+                                    break;
+                                }
+                            }
+                        }
+                    } 
+                    
+                    if (!foundImage && data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+                        base64 = "data:image/jpeg;base64," + data.predictions[0].bytesBase64Encoded;
+                        foundImage = true;
+                    }
+                    
+                    if (!foundImage) {
+                        let debugInfo = "Nenhuma imagem encontrada.";
+                        if (data.candidates && data.candidates[0]?.content?.parts) {
+                            debugInfo = JSON.stringify(data.candidates[0].content.parts);
+                        }
+                        throw new Error(`Formato inesperado. Retorno: ${debugInfo.substring(0, 200)}`);
+                    }
+                }
+
+                chatBox = document.getElementById('chat-box');
+                chatBox.removeChild(loadingMsg);
+
+                const successTxt = t('ai_success') || 'Here is your icon! Click the image to apply it:';
+                addMessage(successTxt, 'ai', base64);
+
+            } catch (err) {
+                console.error(err);
+                const errorTxt = t('ai_error') || 'Sorry, an error occurred. Please try again.';
+                
+                let extraInfo = err.message;
+                if (err.message.includes('Failed to fetch')) {
+                    extraInfo = t('ai_error_connection') || "Falha de Conexão. Verifique a chave da API.";
+                }
+
+                loadingMsg.innerHTML = `${errorTxt}<br><span style="font-size:0.65rem; color:#f87171; display:block; margin-top:6px; line-height: 1.2;">${extraInfo}</span>`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        let currentB64 = null;
+        let globalPanX = 0;
+        let globalPanY = 0;
+        let globalScale = 1;
+        let tempPanX = 0;
+        let tempPanY = 0;
+        let tempScale = 1;
+        let isDragging = false;
+        let startX, startY;
+        let initialPanX, initialPanY;
+
+        function initCropper() {
+            const frame = document.getElementById('cropper-frame');
+            const slider = document.getElementById('cropper-scale-slider');
+            if(!frame) return;
+
+            frame.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialPanX = tempPanX;
+                initialPanY = tempPanY;
+                frame.style.cursor = 'grabbing';
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if(!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                tempPanX = initialPanX + dx;
+                tempPanY = initialPanY + dy;
+                updateCropperImage();
+            });
+
+            window.addEventListener('mouseup', () => { if(isDragging) { isDragging = false; frame.style.cursor = 'grab'; } });
+            window.addEventListener('mouseleave', () => { if(isDragging) { isDragging = false; frame.style.cursor = 'grab'; } });
+
+            slider.addEventListener('input', (e) => {
+                tempScale = parseFloat(e.target.value);
+                document.getElementById('cropper-scale-val').textContent = Math.round(tempScale * 100) + '%';
+                updateCropperImage();
+            });
+        }
+
+        function openCropper(imgSrc) {
+            const modal = document.getElementById('cropper-modal');
+            const frame = document.getElementById('cropper-frame');
+            const img = document.getElementById('cropper-img');
+            const slider = document.getElementById('cropper-scale-slider');
+            
+            frame.style.backgroundColor = 'rgba(0,0,0,0.3)';
+            frame.style.width = '180px';
+            frame.style.height = '77px';
+            frame.dataset.cheight = "77";
+            
+            img.onload = () => {
+                const tw = 180;
+                const th = 77;
+                const rImg = img.naturalWidth / img.naturalHeight;
+                const rCan = tw / th;
+                let drawW = tw;
+                let drawH = th;
+                if (rImg > rCan) {
+                    drawW = tw;
+                    drawH = tw / rImg;
+                } else {
+                    drawH = th;
+                    drawW = th * rImg;
+                }
+                img.style.width = drawW + 'px';
+                img.style.height = drawH + 'px';
+            };
+            img.src = imgSrc;
+            
+            tempPanX = globalPanX = 0;
+            tempPanY = globalPanY = 0;
+            tempScale = globalScale = 1;
+            
+            slider.value = tempScale;
+            document.getElementById('cropper-scale-val').textContent = Math.round(tempScale * 100) + '%';
+            updateCropperImage();
+            
+            modal.style.display = 'flex';
+        }
+
+        function updateCropperImage() {
+            const img = document.getElementById('cropper-img');
+            img.style.transform = `translate(${tempPanX}px, ${tempPanY}px) scale(${tempScale})`;
+        }
+
+        function closeCropper(save) {
+            document.getElementById('cropper-modal').style.display = 'none';
+            if(save) {
+                globalPanX = tempPanX;
+                globalPanY = tempPanY;
+                globalScale = tempScale;
+                processAndSave(currentB64, globalPanX, globalPanY, globalScale);
+            }
+        }
+
+        function saveImageToDeck(b64Data) {
+            if (currentRes === 'clock') {
+                currentB64 = b64Data;
+                openCropper(b64Data);
+            } else {
+                processAndSave(b64Data, 0, 0, 1);
+            }
+        }
+
+        function processAndSave(b64Data, panX, panY, scale) {
+            // Draw on canvas to ensure exact dimensions and pure base64 jpeg/png
+            const canvas = document.getElementById('hidden-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const tw = currentRes === 'clock' ? 458 : 196; 
+            const th = 196;
+            
+            canvas.width = tw;
+            canvas.height = th;
+            
+            const img = new Image();
+            img.onload = () => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0,0,tw,th);
+                
+                // Calculo estilo object-fit: contain
+                const rImg = img.width / img.height;
+                const rCan = tw / th;
+                let drawW = tw;
+                let drawH = th;
+                
+                if (rImg > rCan) {
+                    drawW = tw;
+                    drawH = tw / rImg;
+                } else {
+                    drawH = th;
+                    drawW = th * rImg;
+                }
+                
+                const ratioForPan = currentRes === 'clock' ? (th / 77) : 1;
+                const appliedPanX = panX * ratioForPan;
+                const appliedPanY = panY * ratioForPan;
+
+                const finalWidth = drawW * scale;
+                const finalHeight = drawH * scale;
+                
+                const dx = (tw - finalWidth)/2 + appliedPanX;
+                const dy = (th - finalHeight)/2 + appliedPanY;
+                
+                ctx.drawImage(img, dx, dy, finalWidth, finalHeight);
+                
+                const finalB64Full = canvas.toDataURL('image/png');
+                const b64 = finalB64Full.split(',')[1];
+                
+                const folder = currentRes === 'clock' ? 'IconResizerAIClock' : 'IconResizerAI';
+                const filename = `ai_${Date.now().toString().slice(-5)}_ulanzi.png`;
+                
+                const payload = { action: 'saveIcon', base64: b64, filename, folder, context: actionContext };
+                const port = window.__port || 19871;
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `http://127.0.0.1:${port}/save`, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+
+                xhr.onload = () => {
+                    showSuccessOnDeck(finalB64Full);
+                };
+                xhr.onerror = () => {
+                    if (typeof $UD !== 'undefined' && $UD.sendToPlugin) $UD.sendToPlugin(payload);
+                    showSuccessOnDeck(finalB64Full);
+                };
+                xhr.send(JSON.stringify(payload));
+            };
+            img.src = b64Data;
+        }
+
+        function showSuccessOnDeck(finalB64Full) {
+            const msgHtml = `
+                <div style="font-weight: 500;">${t('ai_saved_success') || 'Imagem salva na galeria de imagens!'}</div>
+                <div style="font-size:0.65rem; color:var(--text-muted); margin-top:4px;">${t('ai_restart_ulanzi') || 'Por favor, reinicie o Ulanzi Studio para visualizar na galeria local.'}</div>
+            `;
+            addMessage(msgHtml, 'ai', finalB64Full);
+
+            if (typeof $UD === 'undefined' || !actionContext) return;
+            try {
+                if (currentRes === 'clock') {
+                    const c = document.createElement('canvas');
+                    c.width = 144; c.height = 144;
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(0,0,144,144);
+                    
+                    ctx.beginPath();
+                    ctx.arc(72, 72, 40, 0, 2 * Math.PI);
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 8;
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(50, 72);
+                    ctx.lineTo(65, 87);
+                    ctx.lineTo(95, 55);
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 8;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.stroke();
+                    
+                    const okB64 = c.toDataURL('image/jpeg', 0.9);
+                    $UD.setBaseDataIcon(actionContext, okB64);
+                    
+                    setTimeout(() => {
+                        $UD.setPathIcon(actionContext, "resources/action-ai.png");
+                    }, 2500);
+                } else {
+                    $UD.setBaseDataIcon(actionContext, finalB64Full);
+                    setTimeout(() => {
+                        $UD.setPathIcon(actionContext, "resources/action-ai.png");
+                    }, 3000);
+                }
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+        
+        loadAndApplyLocalization().then(() => {
+            updateCardsUI();
+            initCropper();
+        });
+    </script>
+</body>
+</html>

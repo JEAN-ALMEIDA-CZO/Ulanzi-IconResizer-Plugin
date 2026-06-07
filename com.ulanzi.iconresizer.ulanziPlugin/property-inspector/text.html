@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ulanzi D200H IconResizer - Text</title>
+    <link rel="stylesheet" href="../libs/css/uspi.css">
+    <script src="../libs/js/constants.js"></script>
+    <script src="../libs/js/eventEmitter.js"></script>
+    <script src="../libs/js/timers.js"></script>
+    <script src="../libs/js/utils.js"></script>
+    <script src="../libs/js/ulanziApi.js"></script>
+    <!-- Import Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Bebas+Neue&family=Caveat:wght@700&family=Inter:wght@400;600;800&family=Lato:wght@700&family=Montserrat:wght@700&family=Oswald:wght@700&family=Pacifico&family=Play&family=Poppins:wght@600&family=Raleway:wght@700&family=Righteous&family=Roboto:wght@700&family=Ubuntu:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #cfd6e2;
+            --accent-hover: #aeb7c4;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --glow: rgba(200, 210, 224, 0.4);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 440px;
+            padding: 12px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .preview-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .preview-canvas-container {
+            flex-shrink: 0;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #000;
+            transition: all 0.3s ease;
+        }
+        .preview-canvas-container.clock-mode {
+            width: 200px;
+            height: 85px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .actions-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .control-group.full {
+            grid-column: span 2;
+        }
+        label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        input[type="text"], select, input[type="number"] {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: inherit;
+        }
+        input[type="text"]:focus, select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .color-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        input[type="color"] {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        .start-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+            white-space: nowrap;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .start-btn:hover { background: var(--accent-hover); }
+        .res-options { display: flex; gap: 8px; }
+        .res-card {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .res-card input { display: none; }
+        .res-card.selected {
+            border-color: var(--accent);
+            background: rgba(200, 210, 224, 0.1);
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .presets-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 2px 6px 2px;
+            margin-top: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+        .preset-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .preset-btn:hover {
+            transform: scale(1.1);
+            border-color: var(--accent);
+        }
+    
+        /* ── silver shimmer theme + accessibility helpers (injected) ── */
+        :root { --accent-ink:#0f172a; --silver-1:#9aa6b6; --silver-2:#ffffff; }
+        @keyframes silverShine { 0%{background-position:220% 0} 100%{background-position:-220% 0} }
+        .start-btn, button.start-btn {
+            background-image: linear-gradient(110deg, var(--silver-1) 0%, var(--silver-2) 45%, #cfd6e2 55%, var(--silver-1) 100%);
+            background-size: 220% 100%;
+            color: var(--accent-ink) !important;
+            border: none;
+            animation: silverShine 3.5s linear infinite;
+            box-shadow: 0 2px 10px rgba(207,214,226,0.18);
+        }
+        .start-btn.outline { background-image:none; background:transparent; color:var(--text-muted) !important; animation:none; box-shadow:none; }
+        .start-btn:hover { filter: brightness(1.06); }
+        .ui-hint {
+            display:inline-flex; align-items:center; gap:5px;
+            font-size:0.62rem; line-height:1.2; color:var(--text-muted);
+            background:rgba(255,255,255,0.05); border:1px solid var(--border);
+            border-radius:10px; padding:2px 8px; white-space:nowrap; user-select:none;
+        }
+        .ui-hint svg { width:11px; height:11px; opacity:.85; flex-shrink:0; }
+        .ui-hint b { color:var(--text-main); font-weight:600; }
+
+    
+        /*range-fix*/
+        input[type="range"]{-webkit-appearance:none;appearance:none;height:4px;background:var(--border);border-radius:3px;outline:none;}
+        input[type="range"]::-webkit-slider-runnable-track{height:4px;background:var(--border);border-radius:3px;}
+        input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;margin-top:-4.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--glow);border:none;cursor:pointer;}
+        input[type="range"]::-webkit-slider-thumb:hover{background:#ffffff;}
+        input[type="range"]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;}
+        input[type="range"]::-moz-range-track{height:4px;background:var(--border);border-radius:3px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Preview Area -->
+        <div class="preview-section">
+            <div class="preview-canvas-container">
+                <canvas id="preview-canvas" width="196" height="196"></canvas>
+            </div>
+            <div class="actions-section">
+                <div class="res-options">
+                    <label class="res-card selected" onclick="updateRes('std')">
+                        <input type="radio" name="res" value="std" checked> <span data-localize="res_std">Padrão</span>
+                    </label>
+                    <label class="res-card" onclick="updateRes('clock')">
+                        <input type="radio" name="res" value="clock"> <span data-localize="res_clock">Relógio</span>
+                    </label>
+                </div>
+                <button class="start-btn" id="btn-process" onclick="processAndSave()" data-localize="text_btn_generate">Gerar Ícone</button>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-grid">
+            <!-- Presets -->
+            <div class="control-group full">
+                <label data-localize="text_label_presets">Gradientes Prontos</label>
+                <div class="presets-row">
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #a855f7, #4c1d95);" onclick="applyPreset('#a855f7', '#4c1d95', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #d946ef, #6d28d9);" onclick="applyPreset('#d946ef', '#6d28d9', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #00f2fe, #4facfe);" onclick="applyPreset('#00f2fe', '#4facfe', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #f093fb, #f5576c);" onclick="applyPreset('#f093fb', '#f5576c', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #84fab0, #8fd3f4);" onclick="applyPreset('#84fab0', '#8fd3f4', '#000000', '#000000')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #ff0844, #ffb199);" onclick="applyPreset('#ff0844', '#ffb199', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #0f172a, #1e293b);" onclick="applyPreset('#0f172a', '#1e293b', '#00f2fe', '#4facfe')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #181818, #181818);" onclick="applyPreset('#181818', '#181818', '#facc15', '#facc15')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #34d399, #065f46);" onclick="applyPreset('#34d399', '#065f46', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #fbbf24, #b45309);" onclick="applyPreset('#fbbf24', '#b45309', '#1f2937', '#1f2937')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #f43f5e, #881337);" onclick="applyPreset('#f43f5e', '#881337', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #38bdf8, #1e3a8a);" onclick="applyPreset('#38bdf8', '#1e3a8a', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #22d3ee, #a21caf);" onclick="applyPreset('#22d3ee', '#a21caf', '#ffffff', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #fb7185, #fdba74);" onclick="applyPreset('#fb7185', '#fdba74', '#7c2d12', '#7c2d12')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #64748b, #0f172a);" onclick="applyPreset('#64748b', '#0f172a', '#f8fafc', '#f8fafc')"></div>
+                    <div class="preset-btn" style="background: linear-gradient(135deg, #c084fc, #1e1b4b);" onclick="applyPreset('#c084fc', '#1e1b4b', '#ffffff', '#ffffff')"></div>
+                </div>
+            </div>
+
+            <div class="control-group full">
+                <label data-localize="text_label_text">Texto do Botão</label>
+                <input type="text" id="text-input" value="ULANZI" oninput="renderPreview()">
+            </div>
+
+            <div class="control-group">
+                <label data-localize="text_label_font">Fonte</label>
+                <select id="font-family" onchange="renderPreview()">
+                    <option value="Inter" data-localize="font_inter">Inter</option>
+                    <option value="Roboto" data-localize="font_roboto">Roboto</option>
+                    <option value="Poppins" data-localize="font_poppins">Poppins</option>
+                    <option value="Montserrat" data-localize="font_montserrat">Montserrat</option>
+                    <option value="Raleway" data-localize="font_raleway">Raleway</option>
+                    <option value="Lato" data-localize="font_lato">Lato</option>
+                    <option value="Ubuntu" data-localize="font_ubuntu">Ubuntu</option>
+                    <option value="Bebas Neue" data-localize="font_bebas_neue">Bebas Neue</option>
+                    <option value="Oswald" data-localize="font_oswald">Oswald</option>
+                    <option value="Play" data-localize="font_play">Play</option>
+                    <option value="Righteous" data-localize="font_righteous">Righteous</option>
+                    <option value="Audiowide" data-localize="font_audiowide">Audiowide</option>
+                    <option value="Pacifico" data-localize="font_pacifico">Pacifico</option>
+                    <option value="Caveat" data-localize="font_caveat">Caveat</option>
+                    <option value="Impact" data-localize="font_impact">Impact</option>
+                    <option value="Arial" data-localize="font_arial">Arial</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label data-localize="text_label_size">Tamanho da Fonte</label>
+                <input type="number" id="font-size" value="40" min="10" max="200" oninput="renderPreview()">
+            </div>
+
+            <div class="control-group">
+                <label data-localize="text_label_color">Cor do Texto</label>
+                <div class="color-row">
+                    <input type="color" id="text-color1" value="#ffffff" oninput="renderPreview()">
+                    <input type="color" id="text-color2" value="#ffffff" oninput="renderPreview()">
+                    <span style="font-size: 0.65rem; color: #94a3b8;" data-localize="text_label_gradient">(Gradiente)</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label data-localize="text_label_bg">Cor do Fundo</label>
+                <div class="color-row">
+                    <input type="color" id="bg-color1" value="#a855f7" oninput="renderPreview()">
+                    <input type="color" id="bg-color2" value="#4c1d95" oninput="renderPreview()">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="checkbox-row">
+                    <input type="checkbox" id="shadow-toggle" onchange="renderPreview()" checked> <span data-localize="text_label_shadow">Sombra (Drop Shadow)</span>
+                </label>
+                <div class="color-row">
+                    <input type="color" id="shadow-color" value="#000000" oninput="renderPreview()">
+                    <input type="number" id="shadow-blur" value="10" min="0" max="50" style="width:40px;" oninput="renderPreview()">
+                    <span style="font-size: 0.65rem; color: #94a3b8;" data-localize="text_label_blur">Blur</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="checkbox-row">
+                    <input type="checkbox" id="border-toggle" onchange="renderPreview()"> <span data-localize="text_label_border">Moldura (Borda)</span>
+                </label>
+                <div class="color-row">
+                    <input type="color" id="border-color" value="#ffffff" oninput="renderPreview()">
+                    <input type="number" id="border-width" value="4" min="1" max="20" style="width:40px;" oninput="renderPreview()">
+                    <span style="font-size: 0.65rem; color: #94a3b8;" data-localize="text_label_px">Px</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../ws-port.js"></script>
+    <script>
+        // ============================================
+        // Sistema de Localização (i18n)
+        // ============================================
+        const AVAILABLE_LANGS = ['en', 'pt', 'es', 'fr', 'de', 'zh', 'ja', 'ko', 'zh_TW'];
+        let currentLocale = {};
+        let currentLangCode = 'en';
+
+        function resolveLanguageCode(rawLang) {
+            if (!rawLang) return 'en';
+            const lowerLang = rawLang.toLowerCase();
+            if (lowerLang === 'zh-tw' || lowerLang === 'zh_tw' || lowerLang === 'zh-hk' || lowerLang === 'zh_hk') return 'zh_TW';
+            const normalized = lowerLang.replace(/[-_].*$/, '');
+            if (AVAILABLE_LANGS.includes(normalized)) return normalized;
+            return 'en';
+        }
+
+        function detectLanguage() {
+            const params = new URLSearchParams(window.location.search);
+            const sdkLang = params.get('language');
+            if (sdkLang) return resolveLanguageCode(sdkLang);
+            const browserLang = navigator.languages && navigator.languages.length ? navigator.languages[0] : (navigator.language || navigator.userLanguage);
+            return resolveLanguageCode(browserLang);
+        }
+
+        async function loadAndApplyLocalization() {
+            currentLangCode = detectLanguage();
+            try {
+                const resp = await fetch(`../${currentLangCode}.json`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                currentLocale = json.Localization || {};
+            } catch (e) {
+                try {
+                    const resp = await fetch(`../en.json`);
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        currentLocale = json.Localization || {};
+                    }
+                } catch (e2) {
+                    currentLocale = {};
+                }
+            }
+            applyLocalization();
+        }
+
+        function applyLocalization() {
+            document.querySelectorAll('[data-localize]').forEach(el => {
+                const key = el.dataset.localize;
+                if (!key || !currentLocale[key]) return;
+                if (el.placeholder && el.placeholder.length) {
+                    el.placeholder = currentLocale[key];
+                } else if (el.tagName === 'INPUT') {
+                    // skip
+                } else {
+                    el.textContent = currentLocale[key];
+                }
+            });
+        }
+
+        function t(key) {
+            return (currentLocale && currentLocale[key]) || key;
+        }
+
+        let actionContext = null;
+        let currentRes = 'std';
+        
+        // Connect to SDK
+        loadAndApplyLocalization().then(() => {
+            if (typeof $UD !== 'undefined') {
+                $UD.connect('com.ulanzi.ulanzistudio.iconresizer.text');
+                $UD.onAdd((m) => { actionContext = m.context; });
+                $UD.onParamFromApp((m) => { actionContext = m.context; });
+            }
+        });
+
+        function updateRes(val) {
+            currentRes = val;
+            document.querySelectorAll('.res-card').forEach(c => {
+                c.classList.remove('selected');
+                if (c.querySelector('input').value === val) {
+                    c.classList.add('selected');
+                }
+            });
+            const container = document.querySelector('.preview-canvas-container');
+            if (val === 'clock') {
+                container.classList.add('clock-mode');
+            } else {
+                container.classList.remove('clock-mode');
+            }
+            renderPreview();
+        }
+
+        function applyPreset(bg1, bg2, t1, t2) {
+            document.getElementById('bg-color1').value = bg1;
+            document.getElementById('bg-color2').value = bg2;
+            document.getElementById('text-color1').value = t1;
+            document.getElementById('text-color2').value = t2;
+            renderPreview();
+        }
+
+        // Aguarda fontes carregarem antes do primeiro render
+        const _fontTried = new Set();
+        document.fonts.ready.then(() => renderPreview());
+
+        function renderPreview() {
+            const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const tw = currentRes === 'clock' ? 458 : 196;
+            const th = 196;
+            canvas.width = tw;
+            canvas.height = th;
+
+            const text = document.getElementById('text-input').value;
+            const fontFamily = document.getElementById('font-family').value;
+            const fontSize = document.getElementById('font-size').value;
+            
+            const textColor1 = document.getElementById('text-color1').value;
+            const textColor2 = document.getElementById('text-color2').value;
+            
+            const bgColor1 = document.getElementById('bg-color1').value;
+            const bgColor2 = document.getElementById('bg-color2').value;
+
+            const hasShadow = document.getElementById('shadow-toggle').checked;
+            const shadowColor = document.getElementById('shadow-color').value;
+            const shadowBlur = document.getElementById('shadow-blur').value;
+
+            const hasBorder = document.getElementById('border-toggle').checked;
+            const borderColor = document.getElementById('border-color').value;
+            const borderWidth = parseInt(document.getElementById('border-width').value) || 0;
+
+            ctx.clearRect(0, 0, tw, th);
+
+            // Draw Background (Gradient)
+            const bgGradient = ctx.createLinearGradient(0, 0, tw, th);
+            bgGradient.addColorStop(0, bgColor1);
+            bgGradient.addColorStop(1, bgColor2);
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, tw, th);
+
+            // Draw Border
+            if (hasBorder && borderWidth > 0) {
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = borderWidth;
+                ctx.strokeRect(borderWidth/2, borderWidth/2, tw - borderWidth, th - borderWidth);
+            }
+
+            // Draw Text
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const fontSpec = `600 ${fontSize}px "${fontFamily}"`;
+            ctx.font = fontSpec + ', sans-serif';
+            // Web font may not be loaded yet → draw now with fallback, then re-render
+            // once the real font is ready (one attempt per family to avoid loops).
+            if (document.fonts && !document.fonts.check(fontSpec) && !_fontTried.has(fontFamily)) {
+                _fontTried.add(fontFamily);
+                document.fonts.load(fontSpec).then(() => renderPreview()).catch(() => {});
+            }
+
+            if (hasShadow) {
+                ctx.shadowColor = shadowColor;
+                ctx.shadowBlur = shadowBlur;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+            } else {
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            }
+
+            // Text Gradient
+            const textGradient = ctx.createLinearGradient(0, th/2 - fontSize/2, 0, th/2 + fontSize/2);
+            textGradient.addColorStop(0, textColor1);
+            textGradient.addColorStop(1, textColor2);
+            
+            ctx.fillStyle = textGradient;
+            ctx.fillText(text, tw/2, th/2);
+        }
+
+        async function processAndSave() {
+            const btn = document.getElementById('btn-process');
+            btn.textContent = t('text_btn_processing');
+            btn.disabled = true;
+
+            try {
+                // Renderiza o frame final
+                renderPreview();
+                const canvas = document.getElementById('preview-canvas');
+
+                canvas.toBlob(async (blob) => {
+                    const folder = currentRes === 'clock' ? 'IconResizerClock' : 'IconResizer';
+                    const safeName = document.getElementById('text-input').value.replace(/[^a-z0-9]/gi, '_') || 'text';
+                    const uniqueId = Date.now().toString().slice(-5);
+                    const filename = `${safeName}_${uniqueId}_ulanzi.png`;
+
+                    const b64 = (await blobToBase64(blob)).split(',')[1];
+                    const payload = { action: 'saveIcon', base64: b64, filename, folder };
+                    
+                    const port = window.__port || 19871;
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', `http://127.0.0.1:${port}/save`, true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+
+                    xhr.onload = () => {
+                        showSuccessOnDeck();
+                        btn.textContent = t('text_btn_saved');
+                        setTimeout(() => { btn.textContent = t('text_btn_generate'); btn.disabled = false; }, 2000);
+                    };
+                    xhr.onerror = () => {
+                        if (typeof $UD !== 'undefined' && $UD.sendToPlugin) $UD.sendToPlugin(payload);
+                        showSuccessOnDeck();
+                        btn.textContent = t('text_btn_saved_ws');
+                        setTimeout(() => { btn.textContent = t('text_btn_generate'); btn.disabled = false; }, 2000);
+                    };
+                    xhr.send(JSON.stringify(payload));
+                }, 'image/png');
+            } catch (err) {
+                console.error(err);
+                btn.textContent = t('text_btn_error');
+                setTimeout(() => { btn.textContent = t('text_btn_generate'); btn.disabled = false; }, 2000);
+            }
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function showSuccessOnDeck() {
+            if (typeof $UD === 'undefined' || !actionContext) return;
+            const checkB64 = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196"><rect width="196" height="196" fill="#1E293B"/><circle cx="98" cy="98" r="60" fill="#10B981"/><path d="M70 100l20 20 40-40" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+            try {
+                $UD.setBaseDataIcon(actionContext, checkB64);
+                setTimeout(() => {
+                    if (typeof $UD !== 'undefined' && actionContext) {
+                        $UD.setPathIcon(actionContext, "resources/action-text.png");
+                    }
+                }, 3000);
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+    </script>
+</body>
+</html>

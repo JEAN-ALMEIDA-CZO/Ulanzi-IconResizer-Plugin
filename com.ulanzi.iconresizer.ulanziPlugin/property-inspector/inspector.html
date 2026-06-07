@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ulanzi D200H IconResizer</title>
+    <link rel="stylesheet" href="../libs/css/uspi.css">
+    <script src="../libs/js/gifsicle.min.js"
+        onerror="alert('Fatal: Failed to load libs/js/gifsicle.min.js')"></script>
+    <script src="../libs/js/constants.js"></script>
+    <script src="../libs/js/eventEmitter.js"></script>
+    <script src="../libs/js/timers.js"></script>
+    <script src="../libs/js/utils.js"></script>
+    <script src="../libs/js/ulanziApi.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #cfd6e2;
+            --accent-hover: #aeb7c4;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --glow: rgba(200, 210, 224, 0.4);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 460px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 4px;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            width: 100%;
+            height: 142px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.4));
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: linear-gradient(145deg, rgba(200, 210, 224, 0.05), rgba(30, 41, 59, 0.6));
+            box-shadow: 0 0 15px var(--glow);
+        }
+
+        .section {
+            display: none;
+            width: 90%;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.visible {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .drop-zone-text svg {
+            width: 32px;
+            height: 32px;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+
+        .drop-zone-text span {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .drop-zone-text small {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .confirm-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--accent);
+        }
+
+        .res-options {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .res-card {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 5px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            max-width: 140px;
+        }
+
+        .res-card input {
+            display: none;
+        }
+
+        .res-card:hover {
+            border-color: var(--accent);
+        }
+
+        .res-card.selected {
+            border-color: var(--accent);
+            background: rgba(200, 210, 224, 0.1);
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        .res-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .res-val {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            background: transparent;
+            color: var(--accent);
+            font-size: 8px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: none;
+            border: 1px solid var(--accent);
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .res-card {
+            position: relative;
+        }
+
+        .start-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 16px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .start-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), #ffffff, var(--accent));
+            background-size: 200% 100%;
+            border-radius: 4px;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: shimmer 2s infinite linear;
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .progress-details {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        .section-result {
+            flex-direction: row !important;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 0 10px;
+        }
+
+        .section-result img {
+            height: 70px;
+            width: 70px;
+            border-radius: 10px;
+            background: #000;
+            object-fit: contain;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .result-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            gap: 2px;
+        }
+
+        .success-msg {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+            color: #10B981;
+            font-weight: 600;
+        }
+
+        .restart-alert {
+            display: flex;
+            align-items: center;
+            background: rgba(234, 179, 8, 0.1);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            border-radius: 4px;
+            padding: 4px;
+            gap: 6px;
+            margin-top: 2px;
+            margin-bottom: 4px;
+        }
+
+        .restart-msg {
+            font-size: 0.75rem;
+            color: #facc15;
+            line-height: 1.2;
+            max-width: 100%;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .error-msg {
+            position: absolute;
+            bottom: 4px;
+            color: #ef4444;
+            font-size: 0.7rem;
+            display: none;
+        }
+    
+        /* ── silver shimmer theme + accessibility helpers (injected) ── */
+        :root { --accent-ink:#0f172a; --silver-1:#9aa6b6; --silver-2:#ffffff; }
+        @keyframes silverShine { 0%{background-position:220% 0} 100%{background-position:-220% 0} }
+        .start-btn, button.start-btn {
+            background-image: linear-gradient(110deg, var(--silver-1) 0%, var(--silver-2) 45%, #cfd6e2 55%, var(--silver-1) 100%);
+            background-size: 220% 100%;
+            color: var(--accent-ink) !important;
+            border: none;
+            animation: silverShine 3.5s linear infinite;
+            box-shadow: 0 2px 10px rgba(207,214,226,0.18);
+        }
+        .start-btn.outline { background-image:none; background:transparent; color:var(--text-muted) !important; animation:none; box-shadow:none; }
+        .start-btn.btn-dark{background:var(--border)!important;background-image:none!important;color:var(--text-main)!important;animation:none;box-shadow:none;}
+        .start-btn:hover { filter: brightness(1.06); }
+        .ui-hint {
+            display:inline-flex; align-items:center; gap:5px;
+            font-size:0.62rem; line-height:1.2; color:var(--text-muted);
+            background:rgba(255,255,255,0.05); border:1px solid var(--border);
+            border-radius:10px; padding:2px 8px; white-space:nowrap; user-select:none;
+        }
+        .ui-hint svg { width:11px; height:11px; opacity:.85; flex-shrink:0; }
+        .ui-hint b { color:var(--text-main); font-weight:600; }
+
+    
+        /*range-fix*/
+        input[type="range"]{-webkit-appearance:none;appearance:none;height:4px;background:var(--border);border-radius:3px;outline:none;}
+        input[type="range"]::-webkit-slider-runnable-track{height:4px;background:var(--border);border-radius:3px;}
+        input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;margin-top:-4.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--glow);border:none;cursor:pointer;}
+        input[type="range"]::-webkit-slider-thumb:hover{background:#ffffff;}
+        input[type="range"]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;}
+        input[type="range"]::-moz-range-track{height:4px;background:var(--border);border-radius:3px;}
+    </style>
+</head>
+
+<body>
+    <div class="uspi-wrapper">
+    <div class="container">
+        <div id="drop-zone" class="drop-zone">
+
+            <div id="section-drop" class="section section-drop visible">
+                <div class="drop-zone-text">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                        </path>
+                    </svg>
+                    <span data-localize="drop_zone_title">Arraste ou clique</span>
+                    <small data-localize="drop_zone_hint">PNG, JPG, GIF</small>
+                </div>
+            </div>
+
+            <div id="section-confirm" class="section section-confirm" style="justify-content: center; padding: 0;">
+                <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 24px; padding: 0;">
+                    
+                    <!-- Left: Preview -->
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 140px; flex-shrink: 0;">
+                        <div id="preview-container" style="width: 44px; height: 44px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 5px; cursor: pointer;">
+                            <img id="selected-icon-preview" src="" style="width: 100%; height: 100%; object-fit: contain; display: block; transition: transform 0.1s;">
+                        </div>
+                        <div class="ui-hint" style="margin-bottom: 5px;" onclick="document.getElementById('preview-container').dispatchEvent(new MouseEvent('dblclick'))">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                            <span data-localize="hint_dblclick">Duplo clique para ajustar</span>
+                        </div>
+
+                        <div style="width: 100%; box-sizing: border-box;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-main); margin-bottom: 4px; white-space: nowrap;">
+                                <span data-localize="icon_scale_title">Tamanho</span>
+                                <span id="scale-val">100%</span>
+                            </div>
+                            <input type="range" id="icon-scale-slider" min="0.1" max="4" step="0.05" value="1" style="width: 100%; height: 4px; accent-color: var(--accent); margin: 0;" oninput="globalScale = parseFloat(this.value); document.getElementById('scale-val').textContent = Math.round(this.value * 100) + '%'; applyGlobalTransformToPreview();">
+                        </div>
+                    </div>
+
+                    <!-- Right: Resolution & Buttons -->
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 6px; gap: 12px; width: 250px;">
+                        <div class="res-options" style="margin: 0; width: 100%; display: flex; gap: 8px;">
+                            <label class="res-card selected" id="card-std" onclick="updateGlobalRes('std')">
+                                <input type="radio" name="res" value="std" checked>
+                                <span class="res-name" data-localize="res_std">Padrão</span>
+                                <span class="res-val">196x196</span>
+                            </label>
+                            <label class="res-card" id="card-clock" onclick="updateGlobalRes('clock')">
+                                <input type="radio" name="res" value="clock">
+                                <span class="badge" data-localize="badge_beta">BETA</span>
+                                <span class="res-name" data-localize="res_clock">Relógio</span>
+                                <span class="res-val">458x196</span>
+                            </label>
+                        </div>
+                        
+                        <div style="display: flex; gap: 8px; justify-content: center; width: 100%;">
+                            <button id="btn-cancel" class="start-btn btn-dark" style="background: var(--border); color: var(--text-main); font-size: 0.75rem; padding: 6px 16px; flex: 1;" onclick="document.getElementById('btn-reset').click()" data-localize="btn_change_icon">Cancelar</button>
+                            <button id="btn-start" class="start-btn" style="padding: 6px 16px; flex: 1;" data-localize="btn_process">Processar</button>
+                        </div>
+                        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 1px; text-align: center;"><span data-localize="label_files">Arquivos:</span> <span id="count-label">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-progress" class="section section-progress">
+                <div class="progress-label">
+                    <span id="prog-status" data-localize="status_processing">Processando...</span>
+                    <span id="prog-percent">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="prog-bar" class="progress-bar-fill"></div>
+                </div>
+                <div id="prog-details" class="progress-details" data-localize="status_starting">Iniciando...</div>
+            </div>
+
+            <div id="section-result" class="section section-result">
+                <img id="res-img" src="" alt="Preview">
+                <div class="result-info">
+                    <span class="success-msg">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span data-localize="status_finished">Aplicado no botão!</span>
+                    </span>
+                    <div class="restart-alert">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" style="flex-shrink: 0;">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <span class="restart-msg" data-localize="msg_restart">Reinicie o Ulanzi Studio para atualizar a galeria</span>
+                    </div>
+                    <button id="btn-reset" class="start-btn" style="padding: 4px 12px; font-size: 0.75rem;"
+                        data-localize="btn_new">Novo Ícone</button>
+                </div>
+            </div>
+
+            <input type="file" id="file-input" accept="image/png, image/jpeg, image/gif" multiple>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+    </div>
+    </div>
+
+    <script src="../ws-port.js"></script>
+    <script>
+        // ============================================
+        // Sistema de Localização (i18n)
+        // ============================================
+        const AVAILABLE_LANGS = ['en', 'pt', 'es', 'fr', 'de', 'zh', 'ja', 'ko', 'zh_TW'];
+        let currentLocale = {};
+        let currentLangCode = 'en';
+
+        /**
+         * Detecta o idioma correto a partir do código do SDK ou navegador.
+         */
+        function resolveLanguageCode(rawLang) {
+            if (!rawLang) return 'en';
+            
+            // Tratamento especial para Chinês Tradicional (Taiwan / Hong Kong)
+            const lowerLang = rawLang.toLowerCase();
+            if (lowerLang === 'zh-tw' || lowerLang === 'zh_tw' || lowerLang === 'zh-hk' || lowerLang === 'zh_hk') {
+                return 'zh_TW';
+            }
+
+            const normalized = lowerLang.replace(/[-_].*$/, '');
+            if (AVAILABLE_LANGS.includes(normalized)) return normalized;
+            return 'en';
+        }
+
+        /**
+         * Obtém o código de idioma do SDK (query param) ou do navegador.
+         */
+        function detectLanguage() {
+            const params = new URLSearchParams(window.location.search);
+            const sdkLang = params.get('language');
+            if (sdkLang) return resolveLanguageCode(sdkLang);
+
+            const browserLang = navigator.languages && navigator.languages.length
+                ? navigator.languages[0]
+                : (navigator.language || navigator.userLanguage);
+            return resolveLanguageCode(browserLang);
+        }
+
+        /**
+         * Carrega o JSON de tradução e aplica nos elementos data-localize.
+         */
+        async function loadAndApplyLocalization() {
+            currentLangCode = detectLanguage();
+            try {
+                const resp = await fetch(`../${currentLangCode}.json`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                currentLocale = json.Localization || {};
+            } catch (e) {
+                console.warn(`[i18n] Falha ao carregar ${currentLangCode}.json, usando fallback 'en'`);
+                try {
+                    const resp = await fetch(`../en.json`);
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        currentLocale = json.Localization || {};
+                    }
+                } catch (e2) {
+                    console.error('[i18n] Falha total no carregamento de idiomas');
+                    currentLocale = {};
+                }
+            }
+            applyLocalization();
+        }
+
+        /**
+         * Aplica as traduções em todos os elementos com data-localize.
+         */
+        function applyLocalization() {
+            document.querySelectorAll('[data-localize]').forEach(el => {
+                const key = el.dataset.localize;
+                if (!key || !currentLocale[key]) return;
+
+                if (el.placeholder && el.placeholder.length) {
+                    el.placeholder = currentLocale[key];
+                } else if (el.tagName === 'INPUT') {
+                    // skip
+                } else {
+                    el.textContent = currentLocale[key];
+                }
+            });
+        }
+
+        /**
+         * Função de tradução: retorna o texto localizado para uma chave.
+         */
+        function t(key) {
+            return (currentLocale && currentLocale[key]) || key;
+        }
+
+        // ============================================
+        // Lógica principal do plugin
+        // ============================================
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const countLabel = document.getElementById('count-label');
+        const btnStart = document.getElementById('btn-start');
+        const resCards = document.querySelectorAll('.res-card');
+        const resImg = document.getElementById('res-img');
+        const btnReset = document.getElementById('btn-reset');
+
+        let selectedRes = 'std';
+        const sections = {
+            drop: document.getElementById('section-drop'),
+            confirm: document.getElementById('section-confirm'),
+            progress: document.getElementById('section-progress'),
+            result: document.getElementById('section-result')
+        };
+
+        let pendingFiles = [];
+        let actionContext = null;
+        const MAX_SIZE_BYTES = 295 * 1024;
+
+        // Carrega a localização ANTES de conectar ao SDK
+        loadAndApplyLocalization().then(() => {
+            if (typeof $UD !== 'undefined') {
+                $UD.connect('com.ulanzi.ulanzistudio.iconresizer.action');
+                $UD.onAdd((m) => { actionContext = m.context; });
+                $UD.onParamFromApp((m) => { actionContext = m.context; });
+            }
+        });
+
+        function showSection(name) {
+            Object.keys(sections).forEach(k => sections[k].classList.remove('visible'));
+            sections[name].classList.add('visible');
+        }
+
+        window.updateGlobalRes = function (val) {
+            selectedRes = val;
+            resCards.forEach(c => {
+                c.classList.remove('selected');
+                if (c.querySelector('input').value === val) {
+                    c.classList.add('selected');
+                    c.querySelector('input').checked = true;
+                }
+            });
+            const previewContainer = document.getElementById('preview-container');
+            if (previewContainer) {
+                previewContainer.style.transition = 'width 0.3s ease';
+                previewContainer.style.width = val === 'clock' ? '112px' : '48px';
+            }
+        };
+
+        dropZone.addEventListener('click', (e) => {
+            if (e.target === fileInput) return;
+            if (e.target.closest('#section-drop') && sections.drop.classList.contains('visible')) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFiles(e.target.files);
+        });
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(n => {
+            dropZone.addEventListener(n, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            if (!sections.drop.classList.contains('visible')) return;
+            const files = e.dataTransfer.files;
+            if (files.length) handleFiles(files);
+        });
+
+        function handleFiles(files) {
+            pendingFiles = Array.from(files).filter(f => f.type.match('image.*'));
+            if (!pendingFiles.length) {
+                alert(t('alert_invalid_files'));
+                return;
+            }
+            countLabel.textContent = pendingFiles.length;
+            
+            const previewImg = document.getElementById('selected-icon-preview');
+            if (previewImg && pendingFiles.length > 0) {
+                if (previewImg.src) URL.revokeObjectURL(previewImg.src);
+                previewImg.src = URL.createObjectURL(pendingFiles[0]);
+            }
+            
+            showSection('confirm');
+        }
+
+        btnReset.addEventListener('click', () => {
+            pendingFiles = [];
+            fileInput.value = '';
+            
+            const previewImg = document.getElementById('selected-icon-preview');
+            if (previewImg && previewImg.src) {
+                URL.revokeObjectURL(previewImg.src);
+                previewImg.src = '';
+            }
+            
+            showSection('drop');
+        });
+
+        btnStart.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const tw = selectedRes === 'clock' ? 458 : 196;
+            const th = 196;
+            const folder = selectedRes === 'clock' ? 'IconResizerClock' : 'IconResizer';
+            showSection('progress');
+            await processBatch(pendingFiles, tw, th, folder);
+        });
+
+        function updateProgressBar(percent, status = null, details = null) {
+            const bar = document.getElementById('prog-bar');
+            const label = document.getElementById('prog-percent');
+            const statusEl = document.getElementById('prog-status');
+            const detailsEl = document.getElementById('prog-details');
+
+            if (percent !== null) {
+                const p = Math.min(100, Math.max(0, percent));
+                bar.style.width = p + '%';
+                label.textContent = Math.round(p) + '%';
+            }
+            if (status) statusEl.textContent = status;
+            if (details) {
+                detailsEl.textContent = details;
+                detailsEl.title = details;
+            }
+        }
+
+        async function processBatch(files, tw, th, folder) {
+            let hasError = false;
+            for (let i = 0; i < files.length; i++) {
+                try {
+                    const resName = (tw === 458) ? `${t('res_clock')} (458x196)` : `${t('res_std')} (196x196)`;
+                    const statusStr = `${t('batch_label')}: ${i + 1}/${files.length}`;
+                    const detailsStr = `${resName} - ${files[i].name}`;
+
+                    const basePercent = (i / files.length) * 100;
+                    updateProgressBar(basePercent, statusStr, detailsStr);
+
+                    const isLastFile = (i === files.length - 1);
+                    await processSingleFile(files[i], tw, th, folder, i, isLastFile, (subPercent) => {
+                        const totalPercent = basePercent + (subPercent / files.length);
+                        updateProgressBar(totalPercent);
+                    });
+
+                    if (!isLastFile) {
+                        // Evita inundar e travar a renderização visual local
+                        await new Promise(r => setTimeout(r, 400));
+                    }
+                } catch (err) {
+                    console.error("Erro no lote: ", err);
+                    alert(`${t('error_processing_file')} "${files[i].name}": ${err.message}`);
+                    hasError = true;
+                    showSection('confirm');
+                    break;
+                }
+            }
+            if (!hasError) {
+                updateProgressBar(100, `✅ ${t('status_done')}`);
+                setTimeout(() => showSection('result'), 500);
+            }
+        }
+
+        async function processSingleFile(file, tw, th, folder, index, isLastFile, onProgress) {
+            const name = file.name.replace(/\.[^/.]+$/, "");
+            let targetFolder = folder;
+
+            if (file.type === 'image/gif') {
+                targetFolder = (tw === 458) ? 'IconResizerAnimatedClock' : 'IconResizerAnimated';
+                await processGif(file, tw, th, targetFolder, name, index, isLastFile, onProgress);
+            } else {
+                await processStaticImage(file, tw, th, targetFolder, name, index, isLastFile, onProgress);
+            }
+        }
+
+        async function processStaticImage(file, tw, th, folder, name, index, isLastFile, onProgress) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = async () => {
+                        try {
+                            const cvs = document.createElement('canvas');
+                            cvs.width = tw;
+                            cvs.height = th;
+                            const ctx = cvs.getContext('2d');
+
+                            // Reference frame size = the cropper's ACTUAL rendered px (captured
+                            // when the cropper opened). globalPanX/Y are in those same px (from
+                            // clientX deltas), so this stays correct on any DPI / 4K display.
+                            // Fallback to the canvas size = identical to the default (no-crop) fit.
+                            const cropperFrame = document.getElementById('cropper-frame');
+                            const fW = parseFloat(cropperFrame && cropperFrame.dataset.fw) || tw;
+                            const fH = parseFloat(cropperFrame && cropperFrame.dataset.fh) || th;
+                            const userScaleLocal = typeof globalScale !== 'undefined' ? globalScale : 1;
+
+                            // object-fit: contain inside the (rendered) frame, then user scale
+                            // (matches the cropper which shows the FULL original; drag/zoom to frame)
+                            const baseRatio = Math.min(fW / img.width, fH / img.height);
+                            const dispW = img.width  * baseRatio * userScaleLocal;
+                            const dispH = img.height * baseRatio * userScaleLocal;
+                            const dispX = (fW - dispW) / 2 + (typeof globalPanX !== 'undefined' ? globalPanX : 0);
+                            const dispY = (fH - dispH) / 2 + (typeof globalPanY !== 'undefined' ? globalPanY : 0);
+
+                            // scale frame-space → canvas (frame and canvas share the same aspect)
+                            const sx = tw / fW, sy = th / fH;
+                            const finalWidth  = dispW * sx;
+                            const finalHeight = dispH * sy;
+                            const dx = dispX * sx;
+                            const dy = dispY * sy;
+
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(0, 0, tw, th);
+
+                            ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, finalWidth, finalHeight);
+
+                            if (onProgress) onProgress(50);
+
+                            cvs.toBlob(async (blob) => {
+                                try {
+                                    let finalBlob = blob;
+                                    if (finalBlob.size > MAX_SIZE_BYTES) {
+                                        let quality = 0.9;
+                                        while (finalBlob.size > MAX_SIZE_BYTES && quality > 0.3) {
+                                            finalBlob = await new Promise(r => cvs.toBlob(r, 'image/jpeg', quality));
+                                            quality -= 0.1;
+                                        }
+                                    }
+
+                                    const resultB64 = await blobToBase64(finalBlob);
+                                    const pureB64 = resultB64.split(',')[1];
+
+                                    if (isLastFile && typeof $UD !== 'undefined' && actionContext) {
+                                        showSuccessOnDeck();
+                                        await new Promise(r => setTimeout(r, 400));
+                                    }
+
+                                    const uniqueId = index + "_" + Date.now().toString().slice(-5);
+                                    await saveToLibrary(finalBlob, `${name}_${uniqueId}_ulanzi.png`, folder);
+
+                                    resImg.src = resultB64;
+                                    resImg.style.width = selectedRes === 'clock' ? '163px' : '70px';
+                                    if (onProgress) onProgress(100);
+                                    resolve();
+                                } catch (err) {
+                                    reject(err);
+                                }
+                            }, 'image/png');
+                        } catch (err) {
+                            reject(err);
+                        }
+                    };
+                    img.onerror = () => reject(new Error(t('error_canvas_decode')));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error(t('error_file_read')));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function processGif(file, tw, th, folder, name, index, isLastFile, onProgress) {
+            const GifsicleWasm = window.gifsicle || (typeof gifsicle !== 'undefined' ? gifsicle : null);
+            if (!GifsicleWasm) throw new Error(t('error_wasm_not_loaded'));
+
+            const buffer = await file.arrayBuffer();
+
+            const imgInfo = await new Promise((resolve, reject) => {
+                const i = new Image();
+                const objUrl = URL.createObjectURL(file);
+                i.onload = () => { URL.revokeObjectURL(objUrl); resolve({ w: i.width, h: i.height }); };
+                i.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error(t('error_gif_dimensions'))); };
+                i.src = objUrl;
+            });
+
+            const targetRatio = tw / th;
+            const imgRatio = imgInfo.w / imgInfo.h;
+            let cropW = imgInfo.w;
+            let cropH = imgInfo.h;
+
+            if (imgRatio > targetRatio) {
+                cropW = Math.round(imgInfo.h * targetRatio);
+            } else {
+                cropH = Math.round(imgInfo.w / targetRatio);
+            }
+
+            const cropX = Math.floor((imgInfo.w - cropW) / 2);
+            const cropY = Math.floor((imgInfo.h - cropH) / 2);
+
+            const cmdTransform = [`1.gif --crop ${cropX},${cropY}+${cropW}x${cropH} --resize ${tw}x${th} --logical-screen ${tw}x${th} --loopcount=forever --no-comments --no-names --no-extensions --no-warnings -o /out/out.gif`];
+
+            if (onProgress) onProgress(20);
+            let outFiles = await GifsicleWasm.run({
+                input: [{ file: buffer, name: '1.gif' }],
+                command: cmdTransform
+            });
+
+            if (!outFiles || !outFiles.length) throw new Error(t('error_wasm_transform'));
+
+            let currentBlob = new Blob([outFiles[0].file || outFiles[0]], { type: 'image/gif' });
+
+            const steps = [
+                { colors: 128, opt: "-O2" },
+                { colors: 64, opt: "-O2" },
+                { colors: 32, opt: "-O2" },
+                { colors: 16, opt: "-O2" },
+                { colors: 8, opt: "-O2" },
+                { colors: 4, opt: "-O2" },
+                { colors: 2, opt: "-O2" }
+            ];
+
+            let stepIdx = 0;
+            while (currentBlob.size > MAX_SIZE_BYTES && stepIdx < steps.length) {
+                const step = steps[stepIdx];
+                if (onProgress) onProgress(30 + (stepIdx * 10));
+
+                const optCmd = [`1.gif --colors ${step.colors} ${step.opt} --logical-screen ${tw}x${th} --careful --no-warnings -o /out/out.gif`];
+                const optResult = await GifsicleWasm.run({
+                    input: [{ file: await currentBlob.arrayBuffer(), name: '1.gif' }],
+                    command: optCmd
+                });
+
+                if (optResult && optResult.length) {
+                    currentBlob = new Blob([optResult[0].file || optResult[0]], { type: 'image/gif' });
+                }
+                stepIdx++;
+            }
+
+            const finalBlob = currentBlob;
+
+            const finalInfo = await new Promise((resolve, reject) => {
+                const i = new Image();
+                const objUrl = URL.createObjectURL(finalBlob);
+                i.onload = () => { URL.revokeObjectURL(objUrl); resolve({ w: i.width, h: i.height }); };
+                i.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error(t('error_gif_validate'))); };
+                i.src = objUrl;
+            });
+
+            const isCorrectSize = finalInfo.w === tw && finalInfo.h === th;
+            const isUnderLimit = finalBlob.size <= MAX_SIZE_BYTES;
+
+            if (!isCorrectSize || !isUnderLimit) {
+                const sizeKB = (finalBlob.size / 1024).toFixed(0);
+                throw new Error(t('error_gif_too_large').replace('{size}', sizeKB));
+            }
+
+            const finalB64 = await blobToBase64(finalBlob);
+            const pureB64 = finalB64.split(',')[1];
+
+            if (isLastFile && typeof $UD !== 'undefined' && actionContext) {
+                showSuccessOnDeck();
+                await new Promise(r => setTimeout(r, 400));
+            }
+
+            const uniqueId = index + "_" + Date.now().toString().slice(-5);
+            await saveToLibrary(finalBlob, `${name}_${uniqueId}_ulanzi.gif`, folder);
+
+            resImg.src = finalB64;
+            resImg.style.width = selectedRes === 'clock' ? '163px' : '70px';
+            if (onProgress) onProgress(100);
+        }
+
+        // Função corrigida: Retorna à integração original com servidor HTTP Node.js 
+        async function saveToLibrary(blob, filename, folder) {
+            const b64 = (await blobToBase64(blob)).split(',')[1];
+            const payload = { action: 'saveIcon', base64: b64, filename, folder };
+            const port = window.__port || 19871;
+
+            return new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `http://127.0.0.1:${port}/save`, true);
+                xhr.timeout = 3000;
+                xhr.setRequestHeader('Content-Type', 'application/json');
+
+                // Aguarda o FileSystem do Node.js gravar o arquivo fisicamente antes de prosseguir
+                xhr.onload = () => {
+                    setTimeout(resolve, 800);
+                };
+
+                // Em caso de falha HTTP, recorremos ao WebSocket apenas como contingência
+                xhr.onerror = () => {
+                    if (typeof $UD !== 'undefined' && $UD.sendToPlugin) {
+                        $UD.sendToPlugin(payload);
+                    }
+                    setTimeout(resolve, 800);
+                };
+
+                xhr.ontimeout = () => {
+                    if (typeof $UD !== 'undefined' && $UD.sendToPlugin) {
+                        $UD.sendToPlugin(payload);
+                    }
+                    setTimeout(resolve, 800);
+                };
+
+                xhr.send(JSON.stringify(payload));
+            });
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        /**
+         * Exibe um ícone de "check" verde no deck físico por 3 segundos,
+         * e depois restaura a logo original do plugin.
+         */
+        function showSuccessOnDeck() {
+            if (typeof $UD === 'undefined' || !actionContext) return;
+            
+            // Ícone de sucesso (Check verde SVG, 196x196) em Base64 puro
+            const checkB64 = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196"><rect width="196" height="196" fill="#1E293B"/><circle cx="98" cy="98" r="60" fill="#10B981"/><path d="M70 100l20 20 40-40" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+            
+            try {
+                // Atualiza o botão no Deck
+                $UD.setBaseDataIcon(actionContext, checkB64);
+                
+                // Restaura a logo padrão do plugin após 3s
+                setTimeout(() => {
+                    if (typeof $UD !== 'undefined' && actionContext) {
+                        // Utiliza o path relativo à raiz do plugin, igual no manifest
+                        $UD.setPathIcon(actionContext, "resources/action-icon.png");
+                    }
+                }, 3000);
+            } catch (e) {
+                console.warn("Falha ao atualizar ícone de sucesso no deck", e);
+            }
+        }
+    </script>
+<!-- CROPPER OVERLAY -->
+<div id="cropper-modal" style="display: none; position: fixed; inset: 0; background: rgba(15,15,20,0.98); z-index: 999999; flex-direction: row; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; gap: 12px; overflow: hidden;">
+    <!-- Left: Cropper Frame -->
+    <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0;">
+        <div style="color: var(--text-main); font-size: 0.7rem; margin-bottom: 3px; font-weight: 500;" data-localize="cropper_title">Ajustar Enquadramento</div>
+        <div class="ui-hint" style="margin-bottom:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg><span data-localize="hint_cropper">Arraste para mover • use o slider para zoom</span></div>
+        <div id="cropper-frame" style="border: 2px dashed var(--accent); position: relative; overflow: hidden; background: rgba(0,0,0,0.3); border-radius: 8px; cursor: grab; flex-shrink: 0;">
+            <img id="cropper-img" src="" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none; transform-origin: center;">
+        </div>
+    </div>
+    
+    <!-- Right: Controls -->
+    <div style="display: flex; flex-direction: column; width: 100px; gap: 12px; flex-shrink: 0;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-main);">
+                <span data-localize="icon_scale_title">Tamanho</span>
+                <span id="cropper-scale-val">100%</span>
+            </div>
+            <input type="range" id="cropper-scale-slider" min="0.1" max="4" step="0.05" value="1" style="width: 100%; accent-color: var(--accent); margin: 0;">
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button class="start-btn" style="padding: 6px; font-size: 0.7rem;" onclick="closeCropper(true)" data-localize="btn_confirm">Confirmar</button>
+            <button class="start-btn btn-dark" style="background: var(--border); color: var(--text-main); font-size: 0.7rem; padding: 6px;" onclick="closeCropper(false)" data-localize="btn_cancel">Cancelar</button>
+        </div>
+    </div>
+</div>
+<script>
+let globalPanX = 0;
+let globalPanY = 0;
+let globalScale = 1;
+
+let tempPanX = 0;
+let tempPanY = 0;
+let tempScale = 1;
+
+let isDragging = false;
+let startX, startY;
+let initialPanX, initialPanY;
+
+function initCropper() {
+    const previewContainer = document.getElementById('preview-container');
+    if(previewContainer) {
+        previewContainer.addEventListener('dblclick', () => {
+            const previewImg = document.getElementById('selected-icon-preview');
+            if(!previewImg || !previewImg.src || previewImg.src.endsWith('.html')) return;
+            openCropper(previewImg.src);
+        });
+        previewContainer.style.cursor = 'pointer';
+        previewContainer.title = (typeof $UD !== 'undefined' && $UD.localization && $UD.localization['tooltip_double_click']) ? $UD.localization['tooltip_double_click'] : 'Duplo clique para ajustar';
+    }
+    
+    const frame = document.getElementById('cropper-frame');
+    const slider = document.getElementById('cropper-scale-slider');
+    if(!frame) return;
+
+    frame.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialPanX = tempPanX;
+        initialPanY = tempPanY;
+        frame.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if(!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        tempPanX = initialPanX + dx;
+        tempPanY = initialPanY + dy;
+        updateCropperImage();
+    });
+
+    window.addEventListener('mouseup', () => {
+        if(isDragging) {
+            isDragging = false;
+            frame.style.cursor = 'grab';
+        }
+    });
+    
+    window.addEventListener('mouseleave', () => {
+        if(isDragging) {
+            isDragging = false;
+            frame.style.cursor = 'grab';
+        }
+    });
+
+    slider.addEventListener('input', (e) => {
+        tempScale = parseFloat(e.target.value);
+        document.getElementById('cropper-scale-val').textContent = Math.round(tempScale * 100) + '%';
+        updateCropperImage();
+    });
+}
+
+function openCropper(imgSrc) {
+    const modal = document.getElementById('cropper-modal');
+    const frame = document.getElementById('cropper-frame');
+    const img = document.getElementById('cropper-img');
+    const slider = document.getElementById('cropper-scale-slider');
+    
+    img.src = imgSrc;
+    
+    const bgColorPicker = document.getElementById('bg-color-picker');
+    if (bgColorPicker && bgColorPicker.value !== '#000000') {
+        frame.style.backgroundColor = bgColorPicker.value;
+    } else {
+        frame.style.backgroundColor = 'rgba(0,0,0,0.3)';
+    }
+
+    if (selectedRes === 'clock') {
+            frame.style.width = '150px';
+            frame.style.height = '64px';
+            frame.dataset.cheight = "64";
+        } else {
+            frame.style.width = '96px';
+            frame.style.height = '96px';
+            frame.dataset.cheight = "96";
+        }
+    
+    tempPanX = globalPanX;
+    tempPanY = globalPanY;
+    tempScale = globalScale;
+    
+    slider.value = tempScale;
+    document.getElementById('cropper-scale-val').textContent = Math.round(tempScale * 100) + '%';
+    updateCropperImage();
+
+    modal.style.display = 'flex';
+
+    // capture the frame's ACTUAL rendered size as the export reference (DPI-proof)
+    requestAnimationFrame(() => {
+        const r = frame.getBoundingClientRect();
+        if (r.width && r.height) { frame.dataset.fw = r.width; frame.dataset.fh = r.height; }
+    });
+}
+
+function updateCropperImage() {
+    const img = document.getElementById('cropper-img');
+    img.style.transform = `translate(${tempPanX}px, ${tempPanY}px) scale(${tempScale})`;
+}
+
+function closeCropper(save) {
+    document.getElementById('cropper-modal').style.display = 'none';
+    if(save) {
+        globalPanX = tempPanX;
+        globalPanY = tempPanY;
+        globalScale = tempScale;
+        
+        const mainSlider = document.getElementById('icon-scale-slider');
+        if(mainSlider) {
+            mainSlider.value = globalScale;
+            const scaleVal = document.getElementById('scale-val');
+            if(scaleVal) scaleVal.textContent = Math.round(globalScale * 100) + '%';
+        }
+        
+        applyGlobalTransformToPreview();
+    }
+}
+
+function applyGlobalTransformToPreview() {
+    const previewImg = document.getElementById('selected-icon-preview');
+    if(!previewImg) return;
+    
+    const cropperHeight = parseFloat(document.getElementById('cropper-frame').dataset.cheight || 196);
+    const ratio = 48 / cropperHeight;
+    
+    const previewPanX = globalPanX * ratio;
+    const previewPanY = globalPanY * ratio;
+    
+    previewImg.style.transform = `translate(${previewPanX}px, ${previewPanY}px) scale(${globalScale})`;
+}
+
+setTimeout(initCropper, 500);
+</script>
+</body>
+
+</html>

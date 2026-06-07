@@ -1,0 +1,133 @@
+{
+  "Author": "Jean Almeida",
+  "Name": "Ulanzi IconResizer",
+  "Description": "Icon Generator for Ulanzi Deck",
+  "Category": "IconResizer",
+  "CategoryIcon": "resources/icon.svg",
+  "Icon": "resources/icon.svg",
+  "Version": "1.0.4",
+  "UUID": "com.ulanzi.ulanzistudio.iconresizer",
+  "Type": "JavaScript",
+  "CodePath": "plugin/app.js",
+  "PrivateAPI": true,
+  "Actions": [
+    {
+      "Name": "Resizer Icons",
+      "Icon": "resources/action-icon.svg",
+      "UUID": "com.ulanzi.ulanzistudio.iconresizer.action",
+      "PropertyInspectorPath": "property-inspector/inspector.html",
+      "States": [
+        {
+          "Name": "Default",
+          "Image": "resources/action-icon.png"
+        }
+      ],
+      "Controllers": [
+        "Keypad"
+      ]
+    },
+    {
+      "Name": "Search Icons",
+      "Icon": "resources/action-search.svg",
+      "UUID": "com.ulanzi.ulanzistudio.iconresizer.search",
+      "PropertyInspectorPath": "property-inspector/search.html",
+      "States": [
+        {
+          "Name": "Default",
+          "Image": "resources/action-search.png"
+        }
+      ],
+      "Controllers": [
+        "Keypad"
+      ]
+    },
+    {
+      "Name": "Search Images",
+      "Icon": "resources/action-images.svg",
+      "UUID": "com.ulanzi.ulanzistudio.iconresizer.images",
+      "PropertyInspectorPath": "property-inspector/images.html",
+      "States": [
+        {
+          "Name": "Default",
+          "Image": "resources/action-images.png"
+        }
+      ],
+      "Controllers": [
+        "Keypad"
+      ]
+    },
+    {
+      "Name": "IconText Generate",
+      "Icon": "resources/action-text.svg",
+      "UUID": "com.ulanzi.ulanzistudio.iconresizer.text",
+      "PropertyInspectorPath": "property-inspector/text.html",
+      "States": [
+        {
+          "Name": "Default",
+          "Image": "resources/action-text.png"
+        }
+      ],
+      "Controllers": [
+        "Keypad"
+      ]
+    },
+    {
+      "Name": "Animated Generator",
+      "Icon": "resources/action-animated.svg",
+      "UUID": "com.ulanzi.ulanzistudio.iconresizer.animated",
+      "PropertyInspectorPath": "property-inspector/animated.html",
+      "States": [
+        {
+          "Name": "Default",
+          "Image": "resources/action-animated.png"
+        }
+      ],
+      "Controllers": [
+        "Keypad"
+      ]
+    },
+    {
+      "Name": "AI Generator",
+      "Icon": "resources/action-ai.svg",
+      "UUID": "com.ulanzi.ulanzistudio.iconresizer.ai",
+      "PropertyInspectorPath": "property-inspector/ai.html",
+      "States": [
+        {
+          "Name": "Default",
+          "Image": "resources/action-ai.png"
+        }
+      ],
+      "Controllers": [
+        "Keypad"
+      ]
+    },
+    {
+      "Name": "Batch Pack",
+      "Icon": "resources/action-batch.svg",
+      "UUID": "com.ulanzi.ulanzistudio.iconresizer.batchpack",
+      "PropertyInspectorPath": "property-inspector/batch-pack.html",
+      "States": [
+        {
+          "Name": "Default",
+          "Image": "resources/action-batch.png"
+        }
+      ],
+      "Controllers": [
+        "Keypad"
+      ]
+    }
+  ],
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    },
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.11"
+    }
+  ],
+  "Software": {
+    "MinVersion": "2.1.0"
+  }
+}

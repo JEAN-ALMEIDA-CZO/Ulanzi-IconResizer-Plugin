@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ulanzi D200H IconResizer - Animated</title>
+    <link rel="stylesheet" href="../libs/css/uspi.css">
+    <script src="../libs/js/constants.js"></script>
+    <script src="../libs/js/eventEmitter.js"></script>
+    <script src="../libs/js/timers.js"></script>
+    <script src="../libs/js/utils.js"></script>
+    <script src="../libs/js/ulanziApi.js"></script>
+    <script src="../libs/js/gif.js"></script>
+    <!-- Import Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Bebas+Neue&family=Caveat:wght@700&family=Inter:wght@400;600;800&family=Lato:wght@700&family=Montserrat:wght@700&family=Oswald:wght@700&family=Pacifico&family=Play&family=Poppins:wght@600&family=Raleway:wght@700&family=Righteous&family=Roboto:wght@700&family=Ubuntu:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #cfd6e2;
+            --accent-hover: #aeb7c4;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --glow: rgba(200, 210, 224, 0.4);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 440px;
+            padding: 12px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .preview-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .preview-canvas-container {
+            flex-shrink: 0;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .preview-canvas-container.clock-mode {
+            width: 198px;
+            height: 85px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .actions-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .control-group.full {
+            grid-column: span 2;
+        }
+        label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        input[type="text"], select, input[type="number"] {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: inherit;
+        }
+        input[type="text"]:focus, select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .color-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        input[type="color"] {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        .start-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+            white-space: nowrap;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .start-btn:hover { background: var(--accent-hover); }
+        .res-options { display: flex; gap: 8px; }
+        .res-card {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .res-card input { display: none; }
+        .res-card.selected {
+            border-color: var(--accent);
+            background: rgba(200, 210, 224, 0.1);
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .presets-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 2px 6px 2px;
+            margin-top: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+        .preset-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .preset-btn:hover {
+            transform: scale(1.1);
+            border-color: var(--accent);
+        }
+    
+        /* ── silver shimmer theme + accessibility helpers (injected) ── */
+        :root { --accent-ink:#0f172a; --silver-1:#9aa6b6; --silver-2:#ffffff; }
+        @keyframes silverShine { 0%{background-position:220% 0} 100%{background-position:-220% 0} }
+        .start-btn, button.start-btn {
+            background-image: linear-gradient(110deg, var(--silver-1) 0%, var(--silver-2) 45%, #cfd6e2 55%, var(--silver-1) 100%);
+            background-size: 220% 100%;
+            color: var(--accent-ink) !important;
+            border: none;
+            animation: silverShine 3.5s linear infinite;
+            box-shadow: 0 2px 10px rgba(207,214,226,0.18);
+        }
+        .start-btn.outline { background-image:none; background:transparent; color:var(--text-muted) !important; animation:none; box-shadow:none; }
+        .start-btn:hover { filter: brightness(1.06); }
+        .ui-hint {
+            display:inline-flex; align-items:center; gap:5px;
+            font-size:0.62rem; line-height:1.2; color:var(--text-muted);
+            background:rgba(255,255,255,0.05); border:1px solid var(--border);
+            border-radius:10px; padding:2px 8px; white-space:nowrap; user-select:none;
+        }
+        .ui-hint svg { width:11px; height:11px; opacity:.85; flex-shrink:0; }
+        .ui-hint b { color:var(--text-main); font-weight:600; }
+
+    
+        /*range-fix*/
+        input[type="range"]{-webkit-appearance:none;appearance:none;height:4px;background:var(--border);border-radius:3px;outline:none;}
+        input[type="range"]::-webkit-slider-runnable-track{height:4px;background:var(--border);border-radius:3px;}
+        input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;margin-top:-4.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--glow);border:none;cursor:pointer;}
+        input[type="range"]::-webkit-slider-thumb:hover{background:#ffffff;}
+        input[type="range"]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;}
+        input[type="range"]::-moz-range-track{height:4px;background:var(--border);border-radius:3px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Preview Area -->
+        <div class="preview-section">
+            <div class="preview-canvas-container">
+                <canvas id="preview-canvas" width="196" height="196"></canvas>
+            </div>
+            <div class="actions-section">
+                <div class="res-options">
+                    <label class="res-card selected" onclick="updateRes('std')">
+                        <input type="radio" name="res" value="std" checked> <span data-localize="res_std">Padrão</span>
+                    </label>
+                    <label class="res-card" onclick="updateRes('clock')">
+                        <input type="radio" name="res" value="clock"> <span data-localize="res_clock">Relógio</span>
+                    </label>
+                </div>
+                <button class="start-btn" id="btn-process" onclick="processAndSave()" data-localize="text_btn_generate">Gerar Ícone</button>
+                <div id="progress-container" style="display: none; width: 100%; margin-top: 4px;">
+                    <div style="font-size: 10px; color: var(--text-muted); display: flex; justify-content: space-between;">
+                        <span id="prog-status" data-localize="status_processing">Processando...</span>
+                        <span id="prog-percent">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 3px; overflow: hidden;">
+                        <div id="prog-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #ffffff); transition: width 0.1s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-grid">
+            <!-- Presets -->
+            <div class="control-group full">
+                <label data-localize="anim_label_presets">Cores Prontas</label>
+                <div class="presets-row">
+                    <div class="preset-btn" style="background: #a855f7;" onclick="applyPreset('#a855f7', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: #4c1d95; border-color: #c084fc;" onclick="applyPreset('#4c1d95', '#e9d5ff')"></div>
+                    <div class="preset-btn" style="background: #00f2fe;" onclick="applyPreset('#00f2fe', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: #8a2be2;" onclick="applyPreset('#8a2be2', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: #0f172a; border-color: #10b981;" onclick="applyPreset('#0f172a', '#10b981')"></div>
+                    <div class="preset-btn" style="background: #181818; border-color: #facc15;" onclick="applyPreset('#181818', '#facc15')"></div>
+                    <div class="preset-btn" style="background: #000000; border-color: #ffffff;" onclick="applyPreset('#000000', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: #2b1055; border-color: #00ffff;" onclick="applyPreset('#2b1055', '#00ffff')"></div>
+                    <div class="preset-btn" style="background: #065f46; border-color: #34d399;" onclick="applyPreset('#065f46', '#34d399')"></div>
+                    <div class="preset-btn" style="background: #b45309; border-color: #fde68a;" onclick="applyPreset('#b45309', '#fde68a')"></div>
+                    <div class="preset-btn" style="background: #881337; border-color: #fda4af;" onclick="applyPreset('#881337', '#fda4af')"></div>
+                    <div class="preset-btn" style="background: #1e3a8a; border-color: #38bdf8;" onclick="applyPreset('#1e3a8a', '#38bdf8')"></div>
+                    <div class="preset-btn" style="background: #a21caf; border-color: #f5d0fe;" onclick="applyPreset('#a21caf', '#f5d0fe')"></div>
+                    <div class="preset-btn" style="background: #0d9488;" onclick="applyPreset('#0d9488', '#ffffff')"></div>
+                    <div class="preset-btn" style="background: #be123c; border-color: #ffe4e6;" onclick="applyPreset('#be123c', '#ffe4e6')"></div>
+                </div>
+            </div>
+
+            <div class="control-group full">
+                <label data-localize="anim_effect_title">Animation Effect</label>
+                <select id="anim-effect" onchange="toggleSpeedControl(); renderPreview()">
+                    <option value="pulse" data-localize="anim_pulse">Pulse</option>
+                    <option value="spin" data-localize="anim_spin">Spin</option>
+                    <option value="marquee" data-localize="anim_marquee">Marquee</option>
+                    <option value="blink" data-localize="anim_blink">Blink</option>
+                    <option value="rainbow" data-localize="anim_rainbow">Rainbow</option>
+                    <option value="shake" data-localize="anim_shake">Shake</option>
+                    <option value="bounce" data-localize="anim_bounce">Bounce</option>
+                    <option value="wave" data-localize="anim_wave">Wave</option>
+                    <option value="swing" data-localize="anim_swing">Swing</option>
+                    <option value="zoom" data-localize="anim_zoom">Zoom</option>
+                    <option value="fade" data-localize="anim_fade">Fade</option>
+                    <option value="slide" data-localize="anim_slide">Slide</option>
+                    <option value="glitch" data-localize="anim_glitch">Glitch</option>
+                    <option value="heartbeat" data-localize="anim_heartbeat">Heartbeat</option>
+                    <option value="neon" data-localize="anim_neon">Neon</option>
+                </select>
+            </div>
+
+            <div class="control-group full" id="speed-container" style="display:none;">
+                <label data-localize="anim_label_speed">Velocidade (Px/frame)</label>
+                <input type="range" id="marquee-speed" min="5" max="40" value="15" oninput="renderPreview()">
+            </div>
+
+            <div class="control-group full">
+                <label data-localize="text_label_text">Texto do Botão</label>
+                <input type="text" id="text-input" value="Animação" data-localize-value="anim_default_text" maxlength="100" oninput="renderPreview()">
+            </div>
+
+            <div class="control-group">
+                <label data-localize="text_label_font">Fonte</label>
+                <select id="font-family" onchange="renderPreview()">
+                    <option value="Inter" data-localize="font_inter">Inter</option>
+                    <option value="Roboto" data-localize="font_roboto">Roboto</option>
+                    <option value="Poppins" data-localize="font_poppins">Poppins</option>
+                    <option value="Montserrat" data-localize="font_montserrat">Montserrat</option>
+                    <option value="Raleway" data-localize="font_raleway">Raleway</option>
+                    <option value="Lato" data-localize="font_lato">Lato</option>
+                    <option value="Ubuntu" data-localize="font_ubuntu">Ubuntu</option>
+                    <option value="Bebas Neue" data-localize="font_bebas_neue">Bebas Neue</option>
+                    <option value="Oswald" data-localize="font_oswald">Oswald</option>
+                    <option value="Play" data-localize="font_play">Play</option>
+                    <option value="Righteous" data-localize="font_righteous">Righteous</option>
+                    <option value="Audiowide" data-localize="font_audiowide">Audiowide</option>
+                    <option value="Pacifico" data-localize="font_pacifico">Pacifico</option>
+                    <option value="Caveat" data-localize="font_caveat">Caveat</option>
+                    <option value="Impact" data-localize="font_impact">Impact</option>
+                    <option value="Arial" data-localize="font_arial">Arial</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label data-localize="text_label_size">Tamanho da Fonte</label>
+                <input type="number" id="font-size" value="32" min="10" max="200" oninput="renderPreview()">
+            </div>
+
+            <div class="control-group">
+                <label data-localize="text_label_color">Cor do Texto</label>
+                <div class="color-row">
+                    <input type="color" id="text-color1" value="#ffffff" oninput="renderPreview()">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label data-localize="text_label_bg">Cor do Fundo</label>
+                <div class="color-row">
+                    <input type="color" id="bg-color1" value="#1e293b" oninput="renderPreview()">
+                </div>
+            </div>
+            
+            <div class="control-group full">
+                <label class="checkbox-row">
+                    <input type="checkbox" id="shadow-toggle" onchange="renderPreview()" checked> <span data-localize="text_label_shadow">Sombra (Drop Shadow)</span>
+                </label>
+                <div class="color-row">
+                    <input type="color" id="shadow-color" value="#000000" oninput="renderPreview()">
+                    <input type="number" id="shadow-blur" value="10" min="0" max="50" style="width:40px;" oninput="renderPreview()">
+                    <span style="font-size: 0.65rem; color: #94a3b8;" data-localize="text_label_blur">Blur</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../ws-port.js"></script>
+    <script>
+        const AVAILABLE_LANGS = ['en', 'pt', 'es', 'fr', 'de', 'zh', 'ja', 'ko', 'zh_TW'];
+        let currentLocale = {};
+        let currentLangCode = 'en';
+
+        function resolveLanguageCode(rawLang) {
+            if (!rawLang) return 'en';
+            const lowerLang = rawLang.toLowerCase();
+            if (lowerLang === 'zh-tw' || lowerLang === 'zh_tw' || lowerLang === 'zh-hk' || lowerLang === 'zh_hk') return 'zh_TW';
+            const normalized = lowerLang.replace(/[-_].*$/, '');
+            if (AVAILABLE_LANGS.includes(normalized)) return normalized;
+            return 'en';
+        }
+
+        function detectLanguage() {
+            const params = new URLSearchParams(window.location.search);
+            const sdkLang = params.get('language');
+            if (sdkLang) return resolveLanguageCode(sdkLang);
+            const browserLang = navigator.languages && navigator.languages.length ? navigator.languages[0] : (navigator.language || navigator.userLanguage);
+            return resolveLanguageCode(browserLang);
+        }
+
+        async function loadAndApplyLocalization() {
+            currentLangCode = detectLanguage();
+            try {
+                const resp = await fetch(`../${currentLangCode}.json`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                currentLocale = json.Localization || {};
+            } catch (e) {
+                try {
+                    const resp = await fetch(`../en.json`);
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        currentLocale = json.Localization || {};
+                    }
+                } catch (e2) {
+                    currentLocale = {};
+                }
+            }
+            applyLocalization();
+        }
+
+        function applyLocalization() {
+            document.querySelectorAll('[data-localize]').forEach(el => {
+                const key = el.dataset.localize;
+                if (!key || !currentLocale[key]) return;
+                if (el.placeholder && el.placeholder.length) {
+                    el.placeholder = currentLocale[key];
+                } else if (el.tagName === 'INPUT') {
+                    // skip
+                } else {
+                    el.textContent = currentLocale[key];
+                }
+            });
+            document.querySelectorAll('[data-localize-value]').forEach(el => {
+                const key = el.dataset.localizeValue;
+                if (key && currentLocale[key]) {
+                    el.value = currentLocale[key];
+                }
+            });
+        }
+
+        function t(key) {
+            return (currentLocale && currentLocale[key]) || key;
+        }
+
+        let actionContext = null;
+        let currentRes = 'std';
+        
+        loadAndApplyLocalization().then(() => {
+            if (typeof $UD !== 'undefined') {
+                $UD.connect('com.ulanzi.ulanzistudio.iconresizer.animated');
+                $UD.onAdd((m) => { actionContext = m.context; });
+                $UD.onParamFromApp((m) => { actionContext = m.context; });
+            }
+        });
+
+        function updateRes(val) {
+            currentRes = val;
+            document.querySelectorAll('.res-card').forEach(c => {
+                c.classList.remove('selected');
+                if (c.querySelector('input').value === val) {
+                    c.classList.add('selected');
+                }
+            });
+            const container = document.querySelector('.preview-canvas-container');
+            if (val === 'clock') {
+                container.classList.add('clock-mode');
+            } else {
+                container.classList.remove('clock-mode');
+            }
+            renderPreview();
+        }
+
+        function toggleSpeedControl() {
+            const effect = document.getElementById('anim-effect').value;
+            document.getElementById('speed-container').style.display = effect === 'marquee' ? 'flex' : 'none';
+        }
+
+        function applyPreset(bg, text) {
+            document.getElementById('bg-color1').value = bg;
+            document.getElementById('text-color1').value = text;
+            renderPreview();
+        }
+
+        const _fontTried = new Set();
+        document.fonts.ready.then(() => {
+            toggleSpeedControl();
+            renderPreview();
+        });
+
+        // Animação rodando no preview
+        let previewProgress = 0;
+        setInterval(() => {
+            let increment = 0.05;
+            const effect = document.getElementById('anim-effect').value;
+            if (effect === 'marquee') {
+                const speed = parseInt(document.getElementById('marquee-speed').value) || 15;
+                increment = speed / 300; // Ajuste empírico de velocidade no preview
+            }
+            previewProgress += increment;
+            if (previewProgress > 1) previewProgress = 0;
+            renderPreview(previewProgress);
+        }, 50);
+
+        function renderPreview(progress = 0) {
+            const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const tw = currentRes === 'clock' ? 458 : 196;
+            const th = 196;
+            canvas.width = tw;
+            canvas.height = th;
+
+            const effect = document.getElementById('anim-effect').value;
+            const text = document.getElementById('text-input').value;
+            const fontFamily = document.getElementById('font-family').value;
+            const fontSize = parseInt(document.getElementById('font-size').value) || 32;
+            const textColor = document.getElementById('text-color1').value;
+            const bgColor = document.getElementById('bg-color1').value;
+
+            const hasShadow = document.getElementById('shadow-toggle').checked;
+            const shadowColor = document.getElementById('shadow-color').value;
+            const shadowBlur = parseInt(document.getElementById('shadow-blur').value) || 10;
+
+            ctx.clearRect(0, 0, tw, th);
+
+            // Background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, tw, th);
+
+            // Setup Font para medir texto corretamente
+            const fontSpec = `600 ${fontSize}px "${fontFamily}"`;
+            ctx.font = fontSpec + ', sans-serif';
+            // Load web font if not ready yet (one attempt per family); preview loop re-renders.
+            if (document.fonts && !document.fonts.check(fontSpec) && !_fontTried.has(fontFamily)) {
+                _fontTried.add(fontFamily);
+                document.fonts.load(fontSpec).catch(() => {});
+            }
+
+            // Effect computations
+            let scale = 1;
+            let angle = 0;
+            let xOffset = 0;
+            let yOffset = 0;
+            let alpha = 1;
+            let finalTextColor = textColor;
+
+            if (effect === 'pulse') {
+                scale = 1 + Math.sin(progress * Math.PI * 2) * 0.15;
+            } else if (effect === 'spin') {
+                angle = progress * Math.PI * 2;
+            } else if (effect === 'marquee') {
+                const textWidth = ctx.measureText(text).width || (text.length * fontSize * 0.6);
+                const startX = (tw + textWidth) / 2;
+                const endX = -(tw + textWidth) / 2;
+                xOffset = startX - (progress * (startX - endX));
+            } else if (effect === 'blink') {
+                alpha = progress < 0.5 ? 1 : 0.2;
+            } else if (effect === 'rainbow') {
+                finalTextColor = `hsl(${Math.floor(progress * 360)}, 100%, 50%)`;
+            } else if (effect === 'shake') {
+                xOffset = Math.sin(progress * Math.PI * 10) * 8;
+            } else if (effect === 'bounce') {
+                yOffset = -Math.abs(Math.sin(progress * Math.PI * 2)) * 20;
+            } else if (effect === 'wave') {
+                yOffset = Math.sin(progress * Math.PI * 2) * 16;
+            } else if (effect === 'swing') {
+                angle = Math.sin(progress * Math.PI * 2) * 0.35;
+            } else if (effect === 'zoom') {
+                scale = 0.65 + (Math.sin(progress * Math.PI * 2) * 0.5 + 0.5) * 0.7;
+            } else if (effect === 'fade') {
+                alpha = 0.25 + (Math.sin(progress * Math.PI * 2) * 0.5 + 0.5) * 0.75;
+            } else if (effect === 'slide') {
+                xOffset = Math.sin(progress * Math.PI * 2) * 34;
+            } else if (effect === 'glitch') {
+                xOffset = (Math.random() - 0.5) * 12;
+                yOffset = (Math.random() - 0.5) * 6;
+                finalTextColor = Math.random() > 0.7 ? '#ff00ea' : (Math.random() > 0.5 ? '#00fff7' : textColor);
+            } else if (effect === 'heartbeat') {
+                const p2 = (progress * 2) % 1;
+                scale = 1 + Math.pow(Math.sin(p2 * Math.PI), 8) * 0.3;
+            } else if (effect === 'neon') {
+                alpha = 0.85 + Math.sin(progress * Math.PI * 4) * 0.15;
+            }
+
+            ctx.save();
+            ctx.translate(tw/2 + xOffset, th/2 + yOffset);
+            ctx.rotate(angle);
+            ctx.scale(scale, scale);
+            ctx.globalAlpha = alpha;
+
+            // Draw Text Setup
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (effect === 'neon') {
+                ctx.shadowColor = finalTextColor;
+                ctx.shadowBlur = 12 + (Math.sin(progress * Math.PI * 2) * 0.5 + 0.5) * 24;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            } else if (hasShadow) {
+                ctx.shadowColor = shadowColor;
+                ctx.shadowBlur = shadowBlur;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+            }
+
+            ctx.fillStyle = finalTextColor;
+            // No modo marquee, o x não é o centro
+            if (effect === 'marquee') {
+                ctx.fillText(text, 0, 0); // xOffset já cuidou disso no translate
+            } else {
+                ctx.fillText(text, 0, 0);
+            }
+            
+            ctx.restore();
+        }
+
+        async function processAndSave() {
+            const btn = document.getElementById('btn-process');
+            const progContainer = document.getElementById('progress-container');
+            const progBar = document.getElementById('prog-bar');
+            const progPercent = document.getElementById('prog-percent');
+
+            btn.style.display = 'none';
+            progContainer.style.display = 'block';
+            progBar.style.width = '0%';
+            progPercent.textContent = '0%';
+
+            try {
+                const tw = currentRes === 'clock' ? 458 : 196;
+                const th = 196;
+                
+                // Configure GIF.js — relative workerScript is resolved from the PI page
+                // URL, so it works cross-platform (Windows + macOS).
+                const gif = new GIF({
+                  workers: 2,
+                  quality: 10,
+                  width: tw,
+                  height: th,
+                  workerScript: '../libs/js/gif.worker.js',
+                  transparent: null
+                });
+                
+                const canvas = document.getElementById('preview-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let numFrames = 20; // 20 frames for a smooth but small loop
+                const delay = 50; // 50ms per frame = 20 fps = 1s loop
+                
+                const effect = document.getElementById('anim-effect').value;
+                if (effect === 'marquee') {
+                    const text = document.getElementById('text-input').value;
+                    const fontSize = parseInt(document.getElementById('font-size').value) || 32;
+                    const fontFamily = document.getElementById('font-family').value;
+                    ctx.font = `600 ${fontSize}px "${fontFamily}", sans-serif`;
+                    const textWidth = ctx.measureText(text).width || (text.length * fontSize * 0.6);
+                    const distance = tw + textWidth;
+                    
+                    // Lemos a velocidade escolhida pelo usuário
+                    const speed = parseInt(document.getElementById('marquee-speed').value) || 15;
+                    numFrames = Math.min(100, Math.max(20, Math.floor(distance / speed)));
+                }
+
+                // Generate frames
+                for (let i = 0; i < numFrames; i++) {
+                    const progress = i / numFrames;
+                    renderPreview(progress);
+                    // Copy canvas pixel data
+                    gif.addFrame(ctx, {copy: true, delay: delay});
+                }
+                
+                gif.on('progress', function(p) {
+                    const percent = Math.round(p * 100);
+                    progBar.style.width = percent + '%';
+                    progPercent.textContent = percent + '%';
+                });
+                
+                gif.on('finished', function(blob) {
+                    const folder = currentRes === 'clock' ? 'IconResizerAnimatedClock' : 'IconResizerAnimated';
+                    const safeName = document.getElementById('text-input').value.replace(/[^a-z0-9]/gi, '_') || 'anim';
+                    const uniqueId = Date.now().toString().slice(-5);
+                    const filename = `${safeName}_${uniqueId}_ulanzi.gif`;
+                    
+                    blobToBase64(blob).then(b64Data => {
+                        const b64 = b64Data.split(',')[1];
+                        const payload = { action: 'saveIcon', base64: b64, filename, folder, gifBase64: b64Data };
+                        
+                        const port = window.__port || 19871;
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', `http://127.0.0.1:${port}/save`, true);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+
+                        xhr.onload = () => {
+                            showSuccessOnDeck(b64Data);
+                            progContainer.style.display = 'none';
+                            btn.style.display = 'block';
+                            btn.textContent = t('text_btn_saved');
+                            setTimeout(() => { btn.textContent = t('text_btn_generate'); btn.disabled = false; }, 2000);
+                        };
+                        xhr.onerror = () => {
+                            if (typeof $UD !== 'undefined' && $UD.sendToPlugin) $UD.sendToPlugin(payload);
+                            showSuccessOnDeck(b64Data);
+                            progContainer.style.display = 'none';
+                            btn.style.display = 'block';
+                            btn.textContent = t('text_btn_saved_ws');
+                            setTimeout(() => { btn.textContent = t('text_btn_generate'); btn.disabled = false; }, 2000);
+                        };
+                        xhr.send(JSON.stringify(payload));
+                    });
+                });
+                
+                gif.render();
+            } catch (err) {
+                console.error(err);
+                progContainer.style.display = 'none';
+                btn.style.display = 'block';
+                btn.textContent = t('text_btn_error');
+                setTimeout(() => { btn.textContent = t('text_btn_generate'); btn.disabled = false; }, 2000);
+            }
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function showSuccessOnDeck(gifB64) {
+            if (typeof $UD === 'undefined' || !actionContext) return;
+            try {
+                if(gifB64) {
+                    $UD.setBaseDataIcon(actionContext, gifB64);
+                } else {
+                    const checkB64 = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196"><rect width="196" height="196" fill="#1E293B"/><circle cx="98" cy="98" r="60" fill="#10B981"/><path d="M70 100l20 20 40-40" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+                    $UD.setBaseDataIcon(actionContext, checkB64);
+                }
+                
+                setTimeout(() => {
+                    if (typeof $UD !== 'undefined' && actionContext) {
+                        $UD.setPathIcon(actionContext, "resources/action-animated.png");
+                    }
+                }, 3000);
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+    </script>
+</body>
+</html>
