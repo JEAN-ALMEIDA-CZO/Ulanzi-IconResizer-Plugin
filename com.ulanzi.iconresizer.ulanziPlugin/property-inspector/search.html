@@ -409,11 +409,12 @@
             background-size: 220% 100%;
             color: var(--accent-ink) !important;
             border: none;
-            animation: silverShine 3.5s linear infinite;
+            animation: none; /* shimmer only while working */
             box-shadow: 0 2px 10px rgba(207,214,226,0.18);
         }
         .start-btn.outline { background-image:none; background:transparent; color:var(--text-muted) !important; animation:none; box-shadow:none; }
         .start-btn.btn-dark{background:var(--border)!important;background-image:none!important;color:var(--text-main)!important;animation:none;box-shadow:none;}
+        .start-btn.working, button.start-btn.working { animation: silverShine 3.5s linear infinite; }
         .start-btn:hover { filter: brightness(1.06); }
         .ui-hint {
             display:inline-flex; align-items:center; gap:5px;
@@ -746,6 +747,42 @@
         // short single words (e.g. "bola" → Slovak), so: (1) trust auto only when
         // confident; (2) otherwise probe a priority list of languages and take the
         // first real translation; (3) keep genuine English as-is.
+        
+        // Non-Google fallback — translate.googleapis.com is blocked in some regions
+        // (e.g. mainland China). MyMemory is reachable there and needs no API key.
+        async function myMemoryToEn(text, sl) {
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(sl)}|en`;
+            const r = await fetch(url);
+            const j = await r.json();
+            const out = ((j.responseData && j.responseData.translatedText) || '').trim();
+            // accept only when it actually produced non-CJK/Hangul output
+            return out && !/[\u3000-\u9fff\uac00-\ud7af]/.test(out) ? out : '';
+        }
+        // guess the source language from the script when online detection is unavailable
+        function guessSourceLang(text) {
+            if (/[\u4e00-\u9fff]/.test(text)) return 'zh-CN';
+            if (/[\u3040-\u30ff]/.test(text)) return 'ja';
+            if (/[\uac00-\ud7af]/.test(text)) return 'ko';
+            if (/[\u0400-\u04ff]/.test(text)) return 'ru';
+            return null;
+        }
+        async function fallbackTranslate(text) {
+            try {
+                const lc = text.toLowerCase();
+                const ui = (typeof currentLangCode !== 'undefined' && currentLangCode)
+                    ? (({ zh: 'zh-CN', zh_TW: 'zh-TW' })[currentLangCode] || currentLangCode) : null;
+                const order = [];
+                const push = l => { if (l && l !== 'en' && !order.includes(l)) order.push(l); };
+                push(guessSourceLang(text)); push(ui);
+                ['zh-CN', 'pt', 'es', 'fr', 'de'].forEach(push);
+                for (const sl of order.slice(0, 4)) {
+                    const out = await myMemoryToEn(text, sl);
+                    if (out && out.toLowerCase() !== lc) return out;
+                }
+            } catch (e) { /* offline → keep original */ }
+            return text;
+        }
+
         async function translateToEn(text) {
             try {
                 const lc = text.toLowerCase();
@@ -764,7 +801,7 @@
                     if (r.out && r.out.toLowerCase() !== lc) return r.out;
                 }
                 return a.out || text;
-            } catch (e) { return text; }
+            } catch (e) { return await fallbackTranslate(text); }
         }
 
         async function searchIconify() {
@@ -1372,6 +1409,45 @@ function applyGlobalTransformToPreview() {
 
 setTimeout(initCropper, 500);
 </script>
+
+    <script>
+        (function () {
+            // Run the silver shimmer only while a task is actually working — saves
+            // CPU/GPU when the panel sits idle (requested by the Ulanzi review).
+            ['searchIconify', 'searchImages', 'sendPrompt', 'generatePack'].forEach(function (n) {
+                var f = window[n];
+                if (typeof f !== 'function') return;
+                window[n] = async function () {
+                    var btns = document.querySelectorAll('.start-btn');
+                    btns.forEach(function (b) { b.classList.add('working'); });
+                    try { return await f.apply(this, arguments); }
+                    finally { btns.forEach(function (b) { b.classList.remove('working'); }); }
+                };
+            });
+        })();
+    </script>
+
+    <!-- floating help button → opens the function tutorial -->
+    <style>
+        .tut-help{position:fixed;top:10px;right:10px;z-index:9999;width:26px;height:26px;border-radius:50%;
+            border:1px solid #2a323d;background:rgba(18,22,29,.88);color:#cfd6e2;font-weight:800;font-size:13px;
+            line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+            box-shadow:0 2px 8px rgba(0,0,0,.35);transition:transform .12s,border-color .12s;padding:0;}
+        .tut-help:hover{border-color:#cfd6e2;color:#ffffff;transform:scale(1.1);}
+    </style>
+    <button id="tut-help" class="tut-help" type="button" title="Tutorial" aria-label="Tutorial">?</button>
+    <script>
+        (function () {
+            document.getElementById('tut-help').addEventListener('click', function () {
+                var lang = (typeof currentLangCode !== 'undefined' && currentLangCode)
+                    ? currentLangCode
+                    : ((window.$UD && $UD.language) || 'en');
+                var hash = '#lang=' + encodeURIComponent(lang) + '&fn=search';
+                try { $UD.openUrl('./property-inspector/tutorial.html' + hash, true); }
+                catch (e) { window.open('tutorial.html' + hash, '_blank'); }
+            });
+        })();
+    </script>
 </body>
 
 </html>

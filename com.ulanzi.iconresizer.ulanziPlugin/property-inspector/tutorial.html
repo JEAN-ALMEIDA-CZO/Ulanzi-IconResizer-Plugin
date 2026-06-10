@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ulanzi IconResizer — Tutorial</title>
+<style>
+  :root{
+    --s1:#9aa6b6; --s2:#ffffff; --s3:#cfd6e2; --acc:#cfd6e2;
+    --bg:#0a0c10; --bg2:#0e1116; --card:#12161d; --line:#222a35;
+    --tx:#eef2f7; --mut:#7e8a99; --r:14px;
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Code',Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(900px 500px at 50% -10%,rgba(207,214,226,.10),transparent 60%),radial-gradient(800px 500px at 110% 110%,rgba(154,166,182,.07),transparent 55%);
+    background-attachment:fixed;}
+  .wrap{max-width:860px;margin:0 auto;padding:30px 20px 60px;}
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:26px;font-family:var(--mono);font-size:12px;color:var(--mut);border-bottom:1px solid var(--line);padding-bottom:14px;}
+  .live{display:inline-flex;align-items:center;gap:7px;color:var(--s3);font-weight:700;letter-spacing:.14em;}
+  .live i{width:8px;height:8px;border-radius:50%;background:var(--s3);box-shadow:0 0 10px var(--s3);animation:beat 1.6s ease-in-out infinite;}
+  .topbar .path{margin-left:auto;opacity:.65;}
+  h1{font-size:clamp(30px,6vw,42px);line-height:1.05;margin:0;font-weight:800;letter-spacing:-.025em;}
+  h1 .g{background:linear-gradient(110deg,var(--s1),var(--s2) 50%,var(--s1));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:var(--mut);margin:8px 0 0;font-size:15px;}
+  .lead{font-size:16px;color:#c6cfda;margin:20px 0 8px;max-width:72ch;}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px;}
+  .toc a{font-size:12.5px;font-weight:600;color:var(--s3);text-decoration:none;background:#10141a;border:1px solid var(--line);border-radius:9px;padding:7px 12px;transition:all .15s;}
+  .toc a:hover{border-color:var(--s3);transform:translateY(-1px);}
+  .sec{margin:30px 0;scroll-margin-top:18px;}
+  .sec.focus .card{border-color:var(--s3);box-shadow:0 0 0 3px rgba(207,214,226,.12);}
+  .kicker{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--s3);font-weight:700;margin-bottom:10px;}
+  .kicker::before{content:"// ";opacity:.55;}
+  h2{font-size:21px;margin:0 0 4px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;}
+  h2 .ic{width:32px;height:32px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;background:#10141a;border:1px solid var(--line);box-shadow:inset 0 0 0 1px rgba(207,214,226,.12);flex:0 0 32px;}
+  h2 .ic img{width:20px;height:20px;display:block;}
+  .toc a img{width:14px;height:14px;vertical-align:-2px;margin-right:6px;}
+  .fdesc{color:var(--mut);font-size:14px;margin:0 0 12px;}
+  .card{position:relative;background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;overflow:hidden;transition:border-color .2s, box-shadow .2s;}
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--s3),transparent 70%);}
+  ol.steps{counter-reset:s;list-style:none;margin:0;padding:2px 0 0 6px;}
+  ol.steps li{position:relative;padding:5px 0 15px 42px;font-size:14.5px;color:#d4dce5;}
+  ol.steps li:not(:last-child)::after{content:"";position:absolute;left:14px;top:30px;bottom:0;width:2px;background:var(--line);}
+  ol.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:2px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#10141a;background:radial-gradient(circle at 35% 30%,var(--s2),var(--s1));box-shadow:0 0 0 4px rgba(207,214,226,.10);}
+  ol.steps b{color:#fff;}
+  .tips{margin-top:6px;border-top:1px dashed var(--line);padding-top:10px;}
+  .tips .tt{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--s3);font-weight:700;}
+  .tips ul{list-style:none;margin:6px 0 0;padding:0;}
+  .tips li{position:relative;padding:4px 0 4px 20px;color:var(--mut);font-size:13px;}
+  .tips li::before{content:"\2726";position:absolute;left:2px;top:4px;color:var(--s3);}
+  .credits{margin-top:42px;display:flex;align-items:center;gap:18px;background:linear-gradient(180deg,#10151c,#0b0f14);border:1px solid var(--line);border-radius:18px;padding:22px;}
+  @media(max-width:520px){.credits{flex-direction:column;text-align:center;}}
+  .avatar{width:78px;height:78px;border-radius:18px;flex:0 0 78px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;color:#10141a;background:linear-gradient(135deg,var(--s1),var(--s2));border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45);}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cby{color:var(--mut);font-size:12px;font-family:var(--mono);}
+  .cname2{font-size:18px;font-weight:800;margin:2px 0 12px;}
+  .social{display:flex;gap:10px;flex-wrap:wrap;}
+  .social a{display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--tx);background:#131822;border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-weight:600;font-size:13px;transition:all .15s;}
+  .social a:hover{border-color:var(--s3);color:var(--s2);transform:translateY(-2px);}
+  .social svg{width:17px;height:17px;fill:currentColor;}
+  .foot{color:#525e6b;font-size:11px;text-align:center;margin-top:22px;font-family:var(--mono);}
+  @keyframes rise{to{opacity:1;transform:none;}}
+  @keyframes beat{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(.55);opacity:.5;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span class="live"><i></i>GUIDE</span>
+    <span>iconresizer · ulanzi deck</span>
+    <span class="path">v1.0.5</span>
+  </div>
+
+  <h1><span class="g">IconResizer</span></h1>
+  <div class="sub" id="sub"></div>
+  <p class="lead" id="lead"></p>
+  <nav class="toc" id="toc"></nav>
+
+  <div id="sections"></div>
+
+  <div class="credits">
+    <div class="avatar"><img src="../assets/author.jpg" alt="Jean Almeida" onerror="this.remove(); this.parentNode.textContent='JA';"></div>
+    <div>
+      <div class="cby" id="c_by">Developed by</div>
+      <div class="cname2">Jean Almeida</div>
+      <div class="social">
+        <a href="https://www.linkedin.com/in/jeanc-almeida/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+          <span>LinkedIn</span>
+        </a>
+        <a href="https://github.com/JEAN-ALMEIDA-CZO/Ulanzi-IconResizer-Plugin" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>
+          <span>GitHub</span>
+        </a>
+        <a href="https://portifolio.athos.app.br/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-2.8a15.7 15.7 0 0 0-1.3-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.1 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.9 1.9-4zM4.3 14a8 8 0 0 1 0-4h3.2a16.8 16.8 0 0 0 0 4H4.3zm.8 2h2.8c.3 1.3.8 2.5 1.3 3.6A8 8 0 0 1 5.1 16zm2.8-8H5.1a8 8 0 0 1 4.1-3.6A15.7 15.7 0 0 0 7.9 8zM12 20c-.8-1.1-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.9-1.9 4zm2.3-6H9.7a14.7 14.7 0 0 1 0-4h4.6a14.7 14.7 0 0 1 0 4zm.4 5.6c.5-1.1 1-2.3 1.3-3.6h2.8a8 8 0 0 1-4.1 3.6zM16.5 14a16.8 16.8 0 0 0 0-4h3.2a8 8 0 0 1 0 4h-3.2z"/></svg>
+          <span id="c_site">Portfolio</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const FN_KEYS = ['resize','search','images','text','animated','ai','batch'];
+// official action icons from /resources (the same ones shown in Ulanzi Studio)
+const FN_SVGS = { resize:'action-icon.svg', search:'action-search.svg', images:'action-images.svg', text:'action-text.svg', animated:'action-animated.svg', ai:'action-ai.svg', batch:'action-batch.svg' };
+const fnImg = (k) => '<img src="../resources/' + FN_SVGS[k] + '" alt="" loading="lazy">';
+
+const TUT = {
+en:{ sub:'How to use every tool', lead:'IconResizer is a 7-in-1 icon studio for your Ulanzi Deck: resize images, search icons and photos, create text and animated keys, generate icons with AI and export whole packs. Tap the ? button in any tool to come back here.', tips:'Tips', by:'Developed by', foot:'Ulanzi IconResizer — tutorial',
+ fn:{
+ resize:{ n:'Icon Resizer', d:'Turn any image into a perfectly framed key icon.', s:['Click <b>Choose image</b> and pick a PNG, JPG or GIF.','Drag to position and use the slider / mouse wheel to zoom — the preview shows exactly what the key will display.','Double-click the preview to fit the whole image.','Click <b>Apply</b> to send the icon to the key.'], t:['High-resolution images stay crisp after the resize.','GIFs keep their animation on the key.'] },
+ search:{ n:'Icon Search', d:'Search 200,000+ vector icons and apply them in one click.', s:['Type what you need — <b>any language works</b> (e.g. “foguete”, “苹果”): it is translated to English automatically.','Pick a color with the color picker.','Click <b>Search</b> and then click an icon to load it.','Adjust the framing and click <b>Apply</b>.'], t:['Vector icons stay sharp at any size.','Try synonyms if a term returns few results.'] },
+ images:{ n:'Image Search', d:'Find photos online and use them as key icons.', s:['Type a search term in any language.','Click <b>Search</b> and browse the photo grid.','Click a photo — the cropper opens with the original image.','Frame the part you want and click <b>Apply</b>.'], t:['Prefer square crops — keys are square.','The cropper shows the full original so you can pick the angle.'] },
+ text:{ n:'Text Button', d:'Create clean text keys: labels, shortcuts, numbers.', s:['Type the text (1–2 short words work best).','Choose font, size, text color and background.','Watch the live preview update in real time.','Click <b>Apply</b> to send it to the key.'], t:['Strong contrast (light text on dark) reads best on the deck.','Use the same style across keys for a uniform look.'] },
+ animated:{ n:'Animated Generator', d:'Generate animated GIF icons with themes and effects.', s:['Pick a theme and an animation effect.','Tune colors and speed — the preview plays live.','Click <b>Generate</b> and wait for the GIF.','Click <b>Apply</b> to send it to the key.'], t:['Short loops look smoother on the deck.','Too many animated keys use more deck resources.'] },
+ ai:{ n:'AI Generator', d:'Describe the icon you want and let the AI draw it.', s:['Describe the icon in the chat — any language (“a blue rocket, flat style”).','Choose the resolution when asked.','Wait for generation and preview the result.','Click <b>Apply</b>, or refine with another message.'], t:['Mention subject + style + color for better results.','Iterate: each new message refines the idea.'] },
+ batch:{ n:'Batch Pack', d:'Build a whole icon pack at once and export it.', s:['Search a theme (any language) — e.g. “social media”.','Click the icons you want to include in the pack.','Pick a common color for visual consistency.','Click <b>Generate pack</b> and import it in Ulanzi Studio.'], t:['One color across the pack = professional look.','Packs save time when setting up a whole page of keys.'] } } },
+
+pt:{ sub:'Como usar cada ferramenta', lead:'O IconResizer é um estúdio de ícones 7-em-1 para o seu Ulanzi Deck: redimensione imagens, busque ícones e fotos, crie teclas de texto e animadas, gere ícones com IA e exporte pacotes inteiros. Toque no botão ? de qualquer ferramenta para voltar aqui.', tips:'Dicas', by:'Desenvolvido por', foot:'Ulanzi IconResizer — tutorial',
+ fn:{
+ resize:{ n:'Ajustar Ícone', d:'Transforme qualquer imagem num ícone perfeitamente enquadrado.', s:['Clique em <b>Escolher imagem</b> e selecione um PNG, JPG ou GIF.','Arraste para posicionar e use o slider / roda do mouse para o zoom — a prévia mostra exatamente o que a tecla exibirá.','Dê duplo clique na prévia para encaixar a imagem inteira.','Clique em <b>Aplicar</b> para enviar o ícone à tecla.'], t:['Imagens em alta resolução continuam nítidas após o ajuste.','GIFs mantêm a animação na tecla.'] },
+ search:{ n:'Buscar Ícones', d:'Pesquise 200.000+ ícones vetoriais e aplique com um clique.', s:['Digite o que precisa — <b>em qualquer idioma</b> (ex. “foguete”, “苹果”): é traduzido para inglês automaticamente.','Escolha a cor no seletor.','Clique em <b>Buscar</b> e depois clique num ícone para carregá-lo.','Ajuste o enquadramento e clique em <b>Aplicar</b>.'], t:['Ícones vetoriais ficam nítidos em qualquer tamanho.','Tente sinônimos se um termo retornar poucos resultados.'] },
+ images:{ n:'Buscar Imagens', d:'Encontre fotos online e use como ícone da tecla.', s:['Digite um termo de busca em qualquer idioma.','Clique em <b>Buscar</b> e navegue pela grade de fotos.','Clique numa foto — o recorte abre com a imagem original.','Enquadre a parte desejada e clique em <b>Aplicar</b>.'], t:['Prefira recortes quadrados — as teclas são quadradas.','O recorte mostra a original inteira para você escolher o ângulo.'] },
+ text:{ n:'Botão de Texto', d:'Crie teclas de texto limpas: rótulos, atalhos, números.', s:['Digite o texto (1–2 palavras curtas funcionam melhor).','Escolha fonte, tamanho, cor do texto e fundo.','Acompanhe a prévia atualizando em tempo real.','Clique em <b>Aplicar</b> para enviar à tecla.'], t:['Contraste forte (texto claro em fundo escuro) lê melhor no deck.','Use o mesmo estilo em várias teclas para um visual uniforme.'] },
+ animated:{ n:'Gerador Animado', d:'Gere ícones GIF animados com temas e efeitos.', s:['Escolha um tema e um efeito de animação.','Ajuste cores e velocidade — a prévia toca ao vivo.','Clique em <b>Gerar</b> e aguarde o GIF.','Clique em <b>Aplicar</b> para enviar à tecla.'], t:['Loops curtos ficam mais fluidos no deck.','Muitas teclas animadas consomem mais recursos do deck.'] },
+ ai:{ n:'Gerador IA', d:'Descreva o ícone que quer e deixe a IA desenhar.', s:['Descreva o ícone no chat — qualquer idioma (“um foguete azul, estilo flat”).','Escolha a resolução quando solicitado.','Aguarde a geração e veja a prévia.','Clique em <b>Aplicar</b>, ou refine com outra mensagem.'], t:['Cite assunto + estilo + cor para resultados melhores.','Itere: cada nova mensagem refina a ideia.'] },
+ batch:{ n:'Pacote em Lote', d:'Monte um pacote de ícones de uma vez e exporte.', s:['Busque um tema (qualquer idioma) — ex. “redes sociais”.','Clique nos ícones que quer incluir no pacote.','Escolha uma cor comum para consistência visual.','Clique em <b>Gerar pacote</b> e importe no Ulanzi Studio.'], t:['Uma cor única no pacote = visual profissional.','Pacotes economizam tempo ao montar uma página inteira de teclas.'] } } },
+
+es:{ sub:'Cómo usar cada herramienta', lead:'IconResizer es un estudio de iconos 7-en-1 para tu Ulanzi Deck: redimensiona imágenes, busca iconos y fotos, crea teclas de texto y animadas, genera iconos con IA y exporta packs completos. Toca el botón ? de cualquier herramienta para volver aquí.', tips:'Consejos', by:'Desarrollado por', foot:'Ulanzi IconResizer — tutorial',
+ fn:{
+ resize:{ n:'Ajustar Icono', d:'Convierte cualquier imagen en un icono perfectamente encuadrado.', s:['Haz clic en <b>Elegir imagen</b> y selecciona un PNG, JPG o GIF.','Arrastra para posicionar y usa el slider / rueda para el zoom.','Doble clic en la vista previa para encajar la imagen entera.','Haz clic en <b>Aplicar</b> para enviar el icono a la tecla.'], t:['Las imágenes de alta resolución se mantienen nítidas.','Los GIF conservan su animación en la tecla.'] },
+ search:{ n:'Buscar Iconos', d:'Busca entre 200.000+ iconos vectoriales y aplícalos con un clic.', s:['Escribe lo que necesitas — <b>en cualquier idioma</b>: se traduce al inglés automáticamente.','Elige el color en el selector.','Haz clic en <b>Buscar</b> y luego en un icono para cargarlo.','Ajusta el encuadre y pulsa <b>Aplicar</b>.'], t:['Los iconos vectoriales se ven nítidos a cualquier tamaño.','Prueba sinónimos si un término da pocos resultados.'] },
+ images:{ n:'Buscar Imágenes', d:'Encuentra fotos online y úsalas como icono.', s:['Escribe un término en cualquier idioma.','Haz clic en <b>Buscar</b> y explora la cuadrícula.','Haz clic en una foto — el recorte abre con la original.','Encuadra la parte deseada y pulsa <b>Aplicar</b>.'], t:['Prefiere recortes cuadrados — las teclas son cuadradas.','El recorte muestra la original completa para elegir el ángulo.'] },
+ text:{ n:'Botón de Texto', d:'Crea teclas de texto limpias: etiquetas, atajos, números.', s:['Escribe el texto (1–2 palabras cortas).','Elige fuente, tamaño, color y fondo.','Mira la vista previa en tiempo real.','Pulsa <b>Aplicar</b> para enviarlo a la tecla.'], t:['El contraste fuerte se lee mejor en el deck.','Usa el mismo estilo en varias teclas para uniformidad.'] },
+ animated:{ n:'Generador Animado', d:'Genera iconos GIF animados con temas y efectos.', s:['Elige un tema y un efecto.','Ajusta colores y velocidad — la vista previa se reproduce en vivo.','Pulsa <b>Generar</b> y espera el GIF.','Pulsa <b>Aplicar</b> para enviarlo a la tecla.'], t:['Los bucles cortos se ven más fluidos.','Muchas teclas animadas consumen más recursos.'] },
+ ai:{ n:'Generador IA', d:'Describe el icono que quieres y deja que la IA lo dibuje.', s:['Describe el icono en el chat — cualquier idioma.','Elige la resolución cuando se pida.','Espera la generación y mira la vista previa.','Pulsa <b>Aplicar</b>, o refina con otro mensaje.'], t:['Menciona tema + estilo + color para mejores resultados.','Itera: cada mensaje refina la idea.'] },
+ batch:{ n:'Pack en Lote', d:'Crea un pack de iconos completo y expórtalo.', s:['Busca un tema (cualquier idioma).','Haz clic en los iconos a incluir.','Elige un color común para consistencia.','Pulsa <b>Generar pack</b> e impórtalo en Ulanzi Studio.'], t:['Un solo color en el pack = aspecto profesional.','Los packs ahorran tiempo al montar una página entera.'] } } },
+
+fr:{ sub:'Comment utiliser chaque outil', lead:'IconResizer est un studio d’icônes 7-en-1 pour votre Ulanzi Deck : redimensionnez des images, cherchez icônes et photos, créez des touches texte et animées, générez des icônes par IA et exportez des packs. Touchez le bouton ? de n’importe quel outil pour revenir ici.', tips:'Astuces', by:'Développé par', foot:'Ulanzi IconResizer — tutoriel',
+ fn:{
+ resize:{ n:'Ajuster l’Icône', d:'Transformez toute image en icône parfaitement cadrée.', s:['Cliquez sur <b>Choisir une image</b> (PNG, JPG ou GIF).','Glissez pour positionner, zoomez au slider / molette.','Double-cliquez l’aperçu pour ajuster l’image entière.','Cliquez sur <b>Appliquer</b> pour l’envoyer à la touche.'], t:['Les images haute résolution restent nettes.','Les GIF gardent leur animation sur la touche.'] },
+ search:{ n:'Recherche d’Icônes', d:'Cherchez parmi 200 000+ icônes vectorielles, en un clic.', s:['Tapez votre besoin — <b>toutes les langues</b> : traduit en anglais automatiquement.','Choisissez la couleur.','Cliquez sur <b>Rechercher</b> puis sur une icône.','Cadrez et cliquez sur <b>Appliquer</b>.'], t:['Les icônes vectorielles restent nettes à toute taille.','Essayez des synonymes si peu de résultats.'] },
+ images:{ n:'Recherche d’Images', d:'Trouvez des photos en ligne pour vos touches.', s:['Tapez un terme dans n’importe quelle langue.','Cliquez sur <b>Rechercher</b> et parcourez la grille.','Cliquez sur une photo — le recadrage s’ouvre sur l’originale.','Cadrez la zone voulue et cliquez sur <b>Appliquer</b>.'], t:['Préférez des cadrages carrés.','Le recadrage montre l’originale entière pour choisir l’angle.'] },
+ text:{ n:'Bouton Texte', d:'Créez des touches texte épurées : libellés, raccourcis.', s:['Tapez le texte (1–2 mots courts).','Choisissez police, taille, couleurs.','Suivez l’aperçu en temps réel.','Cliquez sur <b>Appliquer</b>.'], t:['Un fort contraste se lit mieux sur le deck.','Gardez le même style pour un rendu uniforme.'] },
+ animated:{ n:'Générateur Animé', d:'Générez des icônes GIF animées, thèmes et effets.', s:['Choisissez un thème et un effet.','Réglez couleurs et vitesse — aperçu en direct.','Cliquez sur <b>Générer</b> et attendez le GIF.','Cliquez sur <b>Appliquer</b>.'], t:['Les boucles courtes sont plus fluides.','Trop de touches animées consomment plus de ressources.'] },
+ ai:{ n:'Générateur IA', d:'Décrivez l’icône voulue, l’IA la dessine.', s:['Décrivez l’icône dans le chat — toute langue.','Choisissez la résolution demandée.','Attendez la génération et l’aperçu.','Cliquez sur <b>Appliquer</b>, ou affinez par un autre message.'], t:['Sujet + style + couleur = meilleurs résultats.','Itérez : chaque message affine l’idée.'] },
+ batch:{ n:'Pack par Lot', d:'Créez un pack d’icônes complet et exportez-le.', s:['Cherchez un thème (toute langue).','Cliquez sur les icônes à inclure.','Choisissez une couleur commune.','Cliquez sur <b>Générer le pack</b> puis importez-le dans Ulanzi Studio.'], t:['Une seule couleur = rendu professionnel.','Les packs font gagner du temps pour une page entière.'] } } },
+
+de:{ sub:'So nutzt du jedes Werkzeug', lead:'IconResizer ist ein 7-in-1-Icon-Studio für dein Ulanzi Deck: Bilder anpassen, Icons und Fotos suchen, Text- und Animations-Tasten erstellen, Icons per KI generieren und ganze Packs exportieren. Tippe in jedem Werkzeug auf ?, um hierher zurückzukommen.', tips:'Tipps', by:'Entwickelt von', foot:'Ulanzi IconResizer — Anleitung',
+ fn:{
+ resize:{ n:'Icon Anpassen', d:'Mache aus jedem Bild ein perfekt gerahmtes Tasten-Icon.', s:['Klicke <b>Bild wählen</b> (PNG, JPG oder GIF).','Ziehe zum Positionieren, zoome per Slider / Mausrad.','Doppelklick auf die Vorschau passt das ganze Bild ein.','Klicke <b>Anwenden</b>, um das Icon zur Taste zu senden.'], t:['Hochauflösende Bilder bleiben scharf.','GIFs behalten ihre Animation auf der Taste.'] },
+ search:{ n:'Icon-Suche', d:'Durchsuche 200.000+ Vektor-Icons, ein Klick genügt.', s:['Tippe deinen Begriff — <b>jede Sprache</b>: wird automatisch ins Englische übersetzt.','Wähle die Farbe.','Klicke <b>Suchen</b> und dann auf ein Icon.','Rahmen anpassen und <b>Anwenden</b> klicken.'], t:['Vektor-Icons bleiben in jeder Größe scharf.','Bei wenigen Treffern Synonyme probieren.'] },
+ images:{ n:'Bild-Suche', d:'Finde Fotos online und nutze sie als Tasten-Icon.', s:['Suchbegriff in beliebiger Sprache eingeben.','<b>Suchen</b> klicken und das Raster durchstöbern.','Foto anklicken — der Zuschnitt öffnet das Original.','Gewünschten Ausschnitt rahmen und <b>Anwenden</b>.'], t:['Quadratische Ausschnitte bevorzugen.','Der Zuschnitt zeigt das ganze Original.'] },
+ text:{ n:'Text-Taste', d:'Saubere Text-Tasten: Labels, Shortcuts, Zahlen.', s:['Text eingeben (1–2 kurze Wörter).','Schrift, Größe, Farben wählen.','Live-Vorschau beobachten.','<b>Anwenden</b> klicken.'], t:['Starker Kontrast liest sich am besten.','Gleicher Stil über mehrere Tasten wirkt einheitlich.'] },
+ animated:{ n:'Animations-Generator', d:'Erzeuge animierte GIF-Icons mit Themen und Effekten.', s:['Thema und Effekt wählen.','Farben und Tempo einstellen — Vorschau läuft live.','<b>Generieren</b> klicken und auf das GIF warten.','<b>Anwenden</b> klicken.'], t:['Kurze Loops wirken flüssiger.','Viele animierte Tasten brauchen mehr Ressourcen.'] },
+ ai:{ n:'KI-Generator', d:'Beschreibe dein Icon, die KI zeichnet es.', s:['Icon im Chat beschreiben — jede Sprache.','Auflösung wählen, wenn gefragt.','Generierung abwarten, Vorschau prüfen.','<b>Anwenden</b> klicken oder mit einer neuen Nachricht verfeinern.'], t:['Motiv + Stil + Farbe nennen.','Iterieren: jede Nachricht verfeinert die Idee.'] },
+ batch:{ n:'Batch-Pack', d:'Baue ein ganzes Icon-Pack und exportiere es.', s:['Thema suchen (jede Sprache).','Icons fürs Pack anklicken.','Gemeinsame Farbe wählen.','<b>Pack generieren</b> und in Ulanzi Studio importieren.'], t:['Eine Farbe = professioneller Look.','Packs sparen Zeit für ganze Seiten.'] } } },
+
+ja:{ sub:'各ツールの使い方', lead:'IconResizer は Ulanzi Deck 用の7-in-1アイコンスタジオ：画像調整、アイコン/写真検索、テキスト/アニメキー作成、AI生成、パック出力。各ツールの「?」でいつでもここに戻れます。', tips:'ヒント', by:'開発者', foot:'Ulanzi IconResizer — チュートリアル',
+ fn:{
+ resize:{ n:'アイコン調整', d:'どんな画像もぴったりフレームのキーアイコンに。', s:['<b>画像を選択</b>（PNG・JPG・GIF）。','ドラッグで位置調整、スライダー/ホイールでズーム。','プレビューをダブルクリックで全体表示。','<b>適用</b>でキーへ送信。'], t:['高解像度の画像は縮小後もくっきり。','GIF はキー上でもアニメのまま。'] },
+ search:{ n:'アイコン検索', d:'20万以上のベクターアイコンをワンクリックで。', s:['キーワードを入力 — <b>どの言語でもOK</b>（自動で英語に翻訳）。','カラーピッカーで色を選択。','<b>検索</b>→アイコンをクリックして読み込み。','フレームを調整して<b>適用</b>。'], t:['ベクターはどのサイズでも鮮明。','結果が少なければ類義語を試す。'] },
+ images:{ n:'画像検索', d:'オンラインの写真をキーアイコンに。', s:['任意の言語で検索語を入力。','<b>検索</b>でグリッドを閲覧。','写真をクリック — 元画像でトリミングが開く。','使いたい部分を切り取り<b>適用</b>。'], t:['キーは正方形 — 正方形の切り抜きがおすすめ。','トリミングは元画像全体を表示。'] },
+ text:{ n:'テキストボタン', d:'ラベル・ショートカット・数字のテキストキー。', s:['テキストを入力（短い1〜2語が最適）。','フォント・サイズ・色・背景を選択。','ライブプレビューで確認。','<b>適用</b>でキーへ。'], t:['強いコントラストが見やすい。','同じスタイルで統一感を。'] },
+ animated:{ n:'アニメ生成', d:'テーマとエフェクトでGIFアイコンを生成。', s:['テーマとエフェクトを選択。','色と速度を調整 — プレビューが再生。','<b>生成</b>してGIFを待つ。','<b>適用</b>でキーへ。'], t:['短いループほど滑らか。','アニメキーが多いとリソース消費増。'] },
+ ai:{ n:'AI生成', d:'欲しいアイコンを言葉で伝えるとAIが描く。', s:['チャットで説明 — どの言語でも（「青いロケット、フラット」）。','解像度を選択。','生成を待ってプレビュー確認。','<b>適用</b>、または追加メッセージで調整。'], t:['主題＋スタイル＋色を伝えると精度UP。','メッセージを重ねて改善。'] },
+ batch:{ n:'バッチパック', d:'アイコンパックを一括作成して出力。', s:['テーマを検索（どの言語でも）。','パックに入れるアイコンをクリック。','共通の色を選択。','<b>パック生成</b>→Ulanzi Studio に読み込み。'], t:['1色で統一するとプロの仕上がり。','ページ一式の設定が時短に。'] } } },
+
+ko:{ sub:'각 도구 사용법', lead:'IconResizer는 Ulanzi Deck용 7-in-1 아이콘 스튜디오입니다: 이미지 조정, 아이콘/사진 검색, 텍스트/애니메이션 키, AI 생성, 팩 내보내기. 각 도구의 ? 버튼으로 언제든 여기로 돌아올 수 있어요.', tips:'팁', by:'개발자', foot:'Ulanzi IconResizer — 튜토리얼',
+ fn:{
+ resize:{ n:'아이콘 조정', d:'어떤 이미지든 완벽한 키 아이콘으로.', s:['<b>이미지 선택</b>(PNG·JPG·GIF).','드래그로 위치, 슬라이더/휠로 줌.','미리보기 더블클릭 시 전체 맞춤.','<b>적용</b>으로 키에 전송.'], t:['고해상도 이미지는 줄여도 선명.','GIF는 키에서도 애니메이션 유지.'] },
+ search:{ n:'아이콘 검색', d:'20만+ 벡터 아이콘을 원클릭으로.', s:['검색어 입력 — <b>모든 언어 가능</b>(자동으로 영어 번역).','컬러 피커로 색 선택.','<b>검색</b> 후 아이콘 클릭.','프레임 조정 후 <b>적용</b>.'], t:['벡터는 어떤 크기에서도 선명.','결과가 적으면 유의어 시도.'] },
+ images:{ n:'이미지 검색', d:'온라인 사진을 키 아이콘으로.', s:['아무 언어로 검색어 입력.','<b>검색</b> 후 그리드 탐색.','사진 클릭 — 원본으로 자르기 열림.','원하는 부분을 자르고 <b>적용</b>.'], t:['키는 정사각형 — 정사각 크롭 추천.','자르기는 원본 전체를 보여줘요.'] },
+ text:{ n:'텍스트 버튼', d:'라벨·단축키·숫자용 깔끔한 텍스트 키.', s:['텍스트 입력(짧은 1–2단어).','글꼴·크기·색·배경 선택.','실시간 미리보기 확인.','<b>적용</b>으로 키에 전송.'], t:['강한 대비가 가장 잘 보여요.','같은 스타일로 통일감 있게.'] },
+ animated:{ n:'애니메이션 생성기', d:'테마와 효과로 GIF 아이콘 생성.', s:['테마와 효과 선택.','색·속도 조정 — 미리보기 재생.','<b>생성</b> 후 GIF 대기.','<b>적용</b>으로 키에 전송.'], t:['짧은 루프가 더 부드러워요.','애니메이션 키가 많으면 자원 소모 증가.'] },
+ ai:{ n:'AI 생성기', d:'원하는 아이콘을 설명하면 AI가 그려줘요.', s:['채팅에 설명 — 모든 언어 가능.','요청 시 해상도 선택.','생성 대기 후 미리보기.','<b>적용</b>, 또는 메시지로 다듬기.'], t:['주제+스타일+색을 함께 설명.','메시지를 거듭할수록 정교해져요.'] },
+ batch:{ n:'배치 팩', d:'아이콘 팩을 한 번에 만들어 내보내기.', s:['테마 검색(모든 언어).','팩에 넣을 아이콘 클릭.','공통 색상 선택.','<b>팩 생성</b> 후 Ulanzi Studio에서 가져오기.'], t:['한 가지 색 = 전문적인 룩.','팩으로 페이지 전체 설정이 빨라져요.'] } } },
+
+zh:{ sub:'每个工具的使用方法', lead:'IconResizer 是 Ulanzi Deck 的 7 合 1 图标工作室：调整图片、搜索图标和照片、创建文本/动画按键、AI 生成图标、导出整套图标包。点任意工具中的 ? 按钮即可回到本页。', tips:'提示', by:'开发者', foot:'Ulanzi IconResizer — 教程',
+ fn:{
+ resize:{ n:'调整图标', d:'把任何图片变成完美取景的按键图标。', s:['点击<b>选择图片</b>（PNG、JPG 或 GIF）。','拖动定位，用滑块/滚轮缩放 — 预览即按键最终效果。','双击预览可适配整张图片。','点击<b>应用</b>发送到按键。'], t:['高分辨率图片缩放后依然清晰。','GIF 在按键上保留动画。'] },
+ search:{ n:'搜索图标', d:'搜索 20 万+ 矢量图标，一键应用。', s:['输入关键词 — <b>支持任何语言</b>（如“苹果”）：自动翻译成英文。','用取色器选择颜色。','点击<b>搜索</b>，再点击图标载入。','调整取景后点击<b>应用</b>。'], t:['矢量图标任何尺寸都清晰。','结果少时试试同义词。'] },
+ images:{ n:'搜索图片', d:'在线查找照片用作按键图标。', s:['用任何语言输入关键词。','点击<b>搜索</b>浏览图片网格。','点击图片 — 裁剪器打开原图。','框选所需部分后点击<b>应用</b>。'], t:['按键是正方形 — 建议方形裁剪。','裁剪器显示完整原图便于取景。'] },
+ text:{ n:'文本按钮', d:'创建简洁的文本按键：标签、快捷键、数字。', s:['输入文字（1–2 个短词最佳）。','选择字体、大小、颜色和背景。','实时预览即时更新。','点击<b>应用</b>发送到按键。'], t:['强对比（深底浅字）最易读。','多个按键用同一风格更统一。'] },
+ animated:{ n:'动画生成器', d:'用主题和特效生成 GIF 动画图标。', s:['选择主题和动画特效。','调整颜色和速度 — 预览实时播放。','点击<b>生成</b>等待 GIF。','点击<b>应用</b>发送到按键。'], t:['短循环在按键上更流畅。','动画按键过多会占用更多资源。'] },
+ ai:{ n:'AI 生成器', d:'描述你想要的图标，AI 帮你画。', s:['在聊天中描述 — 任何语言（“蓝色火箭，扁平风格”）。','按提示选择分辨率。','等待生成并查看预览。','点击<b>应用</b>，或继续发消息微调。'], t:['说明主体+风格+颜色效果更好。','多轮对话逐步完善。'] },
+ batch:{ n:'批量打包', d:'一次创建整套图标包并导出。', s:['搜索主题（任何语言）。','点击要加入包的图标。','选择统一颜色保持一致。','点击<b>生成图标包</b>，再导入 Ulanzi Studio。'], t:['整包同色 = 专业观感。','打包为整页按键省时省力。'] } } },
+
+zh_TW:{ sub:'每個工具的使用方法', lead:'IconResizer 是 Ulanzi Deck 的 7 合 1 圖示工作室：調整圖片、搜尋圖示和照片、建立文字/動畫按鍵、AI 產生圖示、匯出整套圖示包。點任一工具中的 ? 按鈕即可回到本頁。', tips:'提示', by:'開發者', foot:'Ulanzi IconResizer — 教學',
+ fn:{
+ resize:{ n:'調整圖示', d:'把任何圖片變成完美取景的按鍵圖示。', s:['點擊<b>選擇圖片</b>（PNG、JPG 或 GIF）。','拖曳定位，用滑桿/滾輪縮放 — 預覽即最終效果。','雙擊預覽可符合整張圖片。','點擊<b>套用</b>傳送到按鍵。'], t:['高解析度圖片縮放後依然清晰。','GIF 在按鍵上保留動畫。'] },
+ search:{ n:'搜尋圖示', d:'搜尋 20 萬+ 向量圖示，一鍵套用。', s:['輸入關鍵字 — <b>支援任何語言</b>：自動翻譯成英文。','用取色器選擇顏色。','點擊<b>搜尋</b>，再點圖示載入。','調整取景後點擊<b>套用</b>。'], t:['向量圖示任何尺寸都清晰。','結果少時試試同義詞。'] },
+ images:{ n:'搜尋圖片', d:'線上尋找照片用作按鍵圖示。', s:['用任何語言輸入關鍵字。','點擊<b>搜尋</b>瀏覽圖片格線。','點擊圖片 — 裁切器開啟原圖。','框選所需部分後點擊<b>套用</b>。'], t:['按鍵是正方形 — 建議方形裁切。','裁切器顯示完整原圖便於取景。'] },
+ text:{ n:'文字按鈕', d:'建立簡潔的文字按鍵：標籤、快捷鍵、數字。', s:['輸入文字（1–2 個短詞最佳）。','選擇字型、大小、顏色和背景。','即時預覽立即更新。','點擊<b>套用</b>傳送到按鍵。'], t:['強對比（深底淺字）最易讀。','多個按鍵用同一風格更統一。'] },
+ animated:{ n:'動畫產生器', d:'用主題和特效產生 GIF 動畫圖示。', s:['選擇主題和動畫特效。','調整顏色和速度 — 預覽即時播放。','點擊<b>產生</b>等待 GIF。','點擊<b>套用</b>傳送到按鍵。'], t:['短循環在按鍵上更流暢。','動畫按鍵過多會佔用更多資源。'] },
+ ai:{ n:'AI 產生器', d:'描述你想要的圖示，AI 幫你畫。', s:['在聊天中描述 — 任何語言。','依提示選擇解析度。','等待產生並查看預覽。','點擊<b>套用</b>，或繼續傳訊息微調。'], t:['說明主體+風格+顏色效果更好。','多輪對話逐步完善。'] },
+ batch:{ n:'批次打包', d:'一次建立整套圖示包並匯出。', s:['搜尋主題（任何語言）。','點擊要加入包的圖示。','選擇統一顏色保持一致。','點擊<b>產生圖示包</b>，再匯入 Ulanzi Studio。'], t:['整包同色 = 專業觀感。','打包為整頁按鍵省時省力。'] } } }
+};
+
+function detectLang(){
+  const params = new URLSearchParams(location.search);
+  const hashP = new URLSearchParams((location.hash||'').replace(/^#/,''));
+  let l = params.get('lang') || hashP.get('lang') || navigator.language || 'en';
+  l = String(l).replace('-','_').toLowerCase();
+  if (l.startsWith('zh')) return (l.includes('tw') || l.includes('hk') || l.includes('hant')) ? 'zh_TW' : 'zh';
+  const s = l.split('_')[0];
+  return TUT[s] ? s : 'en';
+}
+function fnAnchor(){
+  const params = new URLSearchParams(location.search);
+  const hashP = new URLSearchParams((location.hash||'').replace(/^#/,''));
+  const f = params.get('fn') || hashP.get('fn') || '';
+  return FN_KEYS.includes(f) ? f : '';
+}
+
+const lang = detectLang();
+const d = TUT[lang] || TUT.en;
+document.documentElement.lang = lang;
+document.getElementById('sub').textContent = d.sub;
+document.getElementById('lead').textContent = d.lead;
+document.getElementById('c_by').textContent = d.by;
+document.getElementById('foot').textContent = d.foot;
+const PF = { pt:'Portfólio', es:'Portafolio', fr:'Portfolio', de:'Portfolio', ja:'ポートフォリオ', ko:'포트폴리오', zh:'作品集', zh_TW:'作品集', en:'Portfolio' };
+document.getElementById('c_site').textContent = PF[lang] || 'Portfolio';
+
+const toc = document.getElementById('toc');
+const secWrap = document.getElementById('sections');
+FN_KEYS.forEach(k => {
+  const f = d.fn[k];
+  const a = document.createElement('a');
+  a.href = '#' + k; a.innerHTML = fnImg(k) + f.n;
+  toc.appendChild(a);
+  const sec = document.createElement('div');
+  sec.className = 'sec'; sec.id = k;
+  sec.innerHTML =
+    '<span class="kicker">' + k + '</span>' +
+    '<h2><span class="ic">' + fnImg(k) + '</span>' + f.n + '</h2>' +
+    '<p class="fdesc">' + f.d + '</p>' +
+    '<div class="card"><ol class="steps">' + f.s.map(x => '<li>' + x + '</li>').join('') + '</ol>' +
+    '<div class="tips"><span class="tt">' + d.tips + '</span><ul>' + f.t.map(x => '<li>' + x + '</li>').join('') + '</ul></div></div>';
+  secWrap.appendChild(sec);
+});
+
+const target = fnAnchor();
+if (target) {
+  const el = document.getElementById(target);
+  if (el) { el.classList.add('focus'); setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); }
+}
+</script>
+</body>
+</html>

@@ -198,10 +198,11 @@
             background-size: 220% 100%;
             color: var(--accent-ink) !important;
             border: none;
-            animation: silverShine 3.5s linear infinite;
+            animation: none; /* shimmer only while working */
             box-shadow: 0 2px 10px rgba(207,214,226,0.18);
         }
         .start-btn.outline { background-image:none; background:transparent; color:var(--text-muted) !important; animation:none; box-shadow:none; }
+        .start-btn.working, button.start-btn.working { animation: silverShine 3.5s linear infinite; }
         .start-btn:hover { filter: brightness(1.06); }
         .ui-hint {
             display:inline-flex; align-items:center; gap:5px;
@@ -587,6 +588,28 @@
                 console.warn(e);
             }
         }
+    </script>
+
+    <!-- floating help button → opens the function tutorial -->
+    <style>
+        .tut-help{position:fixed;top:10px;right:10px;z-index:9999;width:26px;height:26px;border-radius:50%;
+            border:1px solid #2a323d;background:rgba(18,22,29,.88);color:#cfd6e2;font-weight:800;font-size:13px;
+            line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+            box-shadow:0 2px 8px rgba(0,0,0,.35);transition:transform .12s,border-color .12s;padding:0;}
+        .tut-help:hover{border-color:#cfd6e2;color:#ffffff;transform:scale(1.1);}
+    </style>
+    <button id="tut-help" class="tut-help" type="button" title="Tutorial" aria-label="Tutorial">?</button>
+    <script>
+        (function () {
+            document.getElementById('tut-help').addEventListener('click', function () {
+                var lang = (typeof currentLangCode !== 'undefined' && currentLangCode)
+                    ? currentLangCode
+                    : ((window.$UD && $UD.language) || 'en');
+                var hash = '#lang=' + encodeURIComponent(lang) + '&fn=text';
+                try { $UD.openUrl('./property-inspector/tutorial.html' + hash, true); }
+                catch (e) { window.open('tutorial.html' + hash, '_blank'); }
+            });
+        })();
     </script>
 </body>
 </html>
