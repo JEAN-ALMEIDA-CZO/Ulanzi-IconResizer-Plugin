@@ -5,7 +5,7 @@
   "Category": "IconResizer",
   "CategoryIcon": "resources/icon.svg",
   "Icon": "resources/icon.svg",
-  "Version": "1.0.5",
+  "Version": "1.0.6",
   "UUID": "com.ulanzi.ulanzistudio.iconresizer",
   "Type": "JavaScript",
   "CodePath": "plugin/app.js",

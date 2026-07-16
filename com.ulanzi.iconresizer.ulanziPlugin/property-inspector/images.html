@@ -1106,7 +1106,12 @@
             const cropX = Math.floor((imgInfo.w - cropW) / 2);
             const cropY = Math.floor((imgInfo.h - cropH) / 2);
 
-            const cmdTransform = [`1.gif --crop ${cropX},${cropY}+${cropW}x${cropH} --resize ${tw}x${th} --logical-screen ${tw}x${th} --loopcount=forever --no-comments --no-names --no-extensions --no-warnings -o /out/out.gif`];
+            // IMPORTANT: no --logical-screen here. --resize already sets the logical
+            // screen to ${tw}x${th}; pairing --logical-screen with a --crop made gifsicle
+            // keep the crop's width — a portrait source became a narrow frame on the 458
+            // canvas (content stuck to the left, right half empty) in clock format.
+            const upscaling = cropW < tw || cropH < th; // small source → sharpen the upscale
+            const cmdTransform = [`1.gif --crop ${cropX},${cropY}+${cropW}x${cropH} ${upscaling ? '--resize-method lanczos3 ' : ''}--resize ${tw}x${th} --loopcount=forever --no-comments --no-names --no-extensions --no-warnings -o /out/out.gif`];
 
             if (onProgress) onProgress(20);
             let outFiles = await GifsicleWasm.run({
@@ -1116,36 +1121,42 @@
 
             if (!outFiles || !outFiles.length) throw new Error(t('error_wasm_transform'));
 
-            let currentBlob = new Blob([outFiles[0].file || outFiles[0]], { type: 'image/gif' });
+            const baseBlob = new Blob([outFiles[0].file || outFiles[0]], { type: 'image/gif' });
+            let finalBlob = baseBlob;
 
-            const steps = [
-                { colors: 128, opt: "-O2" },
-                { colors: 64, opt: "-O2" },
-                { colors: 32, opt: "-O2" },
-                { colors: 16, opt: "-O2" },
-                { colors: 8, opt: "-O2" },
-                { colors: 4, opt: "-O2" },
-                { colors: 2, opt: "-O2" }
-            ];
-
-            let stepIdx = 0;
-            while (currentBlob.size > MAX_SIZE_BYTES && stepIdx < steps.length) {
-                const step = steps[stepIdx];
-                if (onProgress) onProgress(30 + (stepIdx * 10));
-
-                const optCmd = [`1.gif --colors ${step.colors} ${step.opt} --logical-screen ${tw}x${th} --careful --no-warnings -o /out/out.gif`];
-                const optResult = await GifsicleWasm.run({
-                    input: [{ file: await currentBlob.arrayBuffer(), name: '1.gif' }],
-                    command: optCmd
-                });
-
-                if (optResult && optResult.length) {
-                    currentBlob = new Blob([optResult[0].file || optResult[0]], { type: 'image/gif' });
+            // Compression ladder (best → worst quality). Each rung runs on the SAME base
+            // GIF (non-cumulative, so lossy artifacts don't compound) and we keep the
+            // FIRST that fits the 295 KB budget — so the key/clock GIF keeps as many
+            // colors as possible instead of being crushed to a handful. --lossy saves far
+            // more per unit of quality than dropping colors alone (clock example: 48
+            // colors @ ~279 KB with lossy, vs only 8 colors the old color-only way).
+            if (baseBlob.size > MAX_SIZE_BYTES) {
+                const ladder = [
+                    { colors: 0, lossy: 30 }, { colors: 0, lossy: 60 },
+                    { colors: 128, lossy: 40 }, { colors: 96, lossy: 60 },
+                    { colors: 64, lossy: 70 }, { colors: 48, lossy: 90 },
+                    { colors: 32, lossy: 100 }, { colors: 24, lossy: 120 },
+                    { colors: 16, lossy: 120 }, { colors: 8, lossy: 80 },
+                    { colors: 4, lossy: 40 }, { colors: 2, lossy: 0 }
+                ];
+                const baseBuf = await baseBlob.arrayBuffer();
+                for (let i = 0; i < ladder.length; i++) {
+                    const step = ladder[i];
+                    if (onProgress) onProgress(30 + Math.round((i / ladder.length) * 60));
+                    const flags = ['1.gif'];
+                    if (step.colors) flags.push(`--colors ${step.colors}`);
+                    if (step.lossy) flags.push(`--lossy=${step.lossy}`);
+                    flags.push('-O3 --careful --no-warnings -o /out/out.gif');
+                    const r = await GifsicleWasm.run({
+                        input: [{ file: baseBuf.slice(0), name: '1.gif' }],
+                        command: [flags.join(' ')]
+                    });
+                    if (r && r.length) {
+                        finalBlob = new Blob([r[0].file || r[0]], { type: 'image/gif' });
+                        if (finalBlob.size <= MAX_SIZE_BYTES) break;
+                    }
                 }
-                stepIdx++;
             }
-
-            const finalBlob = currentBlob;
 
             const finalInfo = await new Promise((resolve, reject) => {
                 const i = new Image();
