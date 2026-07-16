@@ -15,6 +15,7 @@
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-1e293b">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-22c55e">
   <img alt="languages" src="https://img.shields.io/badge/i18n-9%20languages-a855f7">
+  <img alt="Available on Ulanzi Community Store" src="https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/docs/badges/ulanzi-community-store-shield.svg">
 </p>
 
 ---
@@ -66,6 +67,10 @@ The UI auto-detects the Ulanzi/system language and falls back to English.
 
 ### From the Ulanzi Store
 Search for **IconResizer** in the UlanziDeck plugin store and click install.
+
+### From Ulanzi Community Store
+
+Download here: https://ulanzicommunitystore.narlei.com/plugins/?plugin=JEAN-ALMEIDA-CZO/Ulanzi-IconResizer-Plugin
 
 ### Manual / from source
 1. Clone or download this repository.
