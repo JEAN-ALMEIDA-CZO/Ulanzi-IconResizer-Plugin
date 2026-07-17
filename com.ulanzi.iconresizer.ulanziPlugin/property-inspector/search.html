@@ -856,8 +856,14 @@
                     img.crossOrigin = 'anonymous'; // Important for CORS and fetching
                     
                     el.appendChild(img);
-                    el.onclick = () => fetchIconAndSelect(svgUrl, `${name}.svg`);
-                    
+                    // Rebuild the URL with the CURRENT color at click time — the search-time
+                    // svgUrl froze the old color, so picking a new color then selecting an icon
+                    // used to save it in the previous color until you re-searched.
+                    el.onclick = () => {
+                        const curHex = document.getElementById('icon-color-picker').value.replace('#', '%23');
+                        fetchIconAndSelect(`https://api.iconify.design/${prefix}/${name}.svg?color=${curHex}`, `${name}.svg`);
+                    };
+
                     grid.appendChild(el);
                 });
             } catch (err) {

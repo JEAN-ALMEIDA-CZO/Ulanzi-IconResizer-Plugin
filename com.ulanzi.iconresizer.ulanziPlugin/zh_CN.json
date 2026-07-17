@@ -159,7 +159,9 @@
     "anim_glitch": "故障",
     "anim_heartbeat": "心跳",
     "anim_neon": "霓虹",
-    "toast_press": "Ulanzi IconResizer — 打开面板以创建图标"
+    "toast_press": "Ulanzi IconResizer — 打开面板以创建图标",
+    "bp_icon_size": "图标大小",
+    "bp_text_size": "文字大小"
   },
   "Actions": [
     {

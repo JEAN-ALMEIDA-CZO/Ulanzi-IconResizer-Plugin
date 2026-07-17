@@ -159,7 +159,9 @@
     "anim_glitch": "Glitch",
     "anim_heartbeat": "Herzschlag",
     "anim_neon": "Neon",
-    "toast_press": "Ulanzi IconResizer — Panel öffnen, um dein Icon zu erstellen"
+    "toast_press": "Ulanzi IconResizer — Panel öffnen, um dein Icon zu erstellen",
+    "bp_icon_size": "Symbolgröße",
+    "bp_text_size": "Textgröße"
   },
   "Actions": [
     {

@@ -361,7 +361,7 @@
             <!-- Fonte -->
             <div class="control-group">
                 <label data-localize="text_label_font">Fonte Universal</label>
-                <select id="font-family" onchange="renderPreview()">
+                <select id="font-family" onchange="onFontChange()">
                     <option value="Inter" data-localize="font_inter">Inter</option>
                     <option value="Roboto" data-localize="font_roboto">Roboto</option>
                     <option value="Poppins" data-localize="font_poppins">Poppins</option>
@@ -377,6 +377,26 @@
                     <option value="Pacifico" data-localize="font_pacifico">Pacifico (Cursive)</option>
                     <option value="Impact">Impact</option>
                 </select>
+            </div>
+
+            <!-- Tamanho do Ícone -->
+            <div class="control-group">
+                <label data-localize="bp_icon_size">Tamanho do Ícone</label>
+                <div class="color-row" style="gap:8px; align-items:center;">
+                    <input type="range" id="icon-scale" min="0.3" max="2.5" step="0.05" value="1" style="flex:1;"
+                        oninput="document.getElementById('icon-scale-val').textContent=Math.round(this.value*100)+'%'; renderPreview()">
+                    <span id="icon-scale-val" style="min-width:40px; text-align:right; font-size:0.72rem; color:var(--text-muted);">100%</span>
+                </div>
+            </div>
+
+            <!-- Tamanho do Texto -->
+            <div class="control-group">
+                <label data-localize="bp_text_size">Tamanho do Texto</label>
+                <div class="color-row" style="gap:8px; align-items:center;">
+                    <input type="range" id="text-scale" min="0.3" max="2.5" step="0.05" value="1" style="flex:1;"
+                        oninput="document.getElementById('text-scale-val').textContent=Math.round(this.value*100)+'%'; renderPreview()">
+                    <span id="text-scale-val" style="min-width:40px; text-align:right; font-size:0.72rem; color:var(--text-muted);">100%</span>
+                </div>
             </div>
 
             <!-- Arredondamento -->
@@ -668,8 +688,14 @@
                 else if (activePos.includes('r')) iconOffsetX = -size * 0.12;
             }
 
-            const emojiSize = hasText ? size * 0.34 : size * 0.42;
-            const svgSize = hasText ? size * 0.40 : size * 0.48;
+            // user size controls (icon + text), default 1 = current look
+            const iconScaleEl = document.getElementById('icon-scale');
+            const textScaleEl = document.getElementById('text-scale');
+            const iconScale = iconScaleEl ? (parseFloat(iconScaleEl.value) || 1) : 1;
+            const textScale = textScaleEl ? (parseFloat(textScaleEl.value) || 1) : 1;
+
+            const emojiSize = (hasText ? size * 0.34 : size * 0.42) * iconScale;
+            const svgSize = (hasText ? size * 0.40 : size * 0.48) * iconScale;
 
             // Draw Emoji OR SVG
             if (item.iconType === 'svg' && item.imgObj) {
@@ -724,7 +750,7 @@
                     ty = y + size/2 + size * 0.28;
                 }
                 
-                ctx.font = `600 ${hasIcon ? size * 0.16 : size * 0.20}px "${fontFamily}", sans-serif`;
+                ctx.font = `600 ${(hasIcon ? size * 0.16 : size * 0.20) * textScale}px "${fontFamily}", sans-serif`;
                 ctx.fillText(item.text, tx, ty);
             }
             
@@ -746,6 +772,21 @@
             items.forEach((item, idx) => {
                 drawButton(ctx, item, idx * (size + gap), 0, size);
             });
+        }
+
+        // Fonts load async (Google Fonts). Drawing to canvas before the face is ready
+        // silently falls back — which looked like "the font doesn't update". Load the
+        // chosen face first, THEN redraw, so the preview reflects the font in real time.
+        function onFontChange() {
+            const f = document.getElementById('font-family').value;
+            if (document.fonts && document.fonts.load) {
+                Promise.all([
+                    document.fonts.load(`600 40px "${f}"`),
+                    document.fonts.load(`40px "${f}"`)
+                ]).then(renderPreview).catch(renderPreview);
+            } else {
+                renderPreview();
+            }
         }
 
         // --- ICON PANEL LOGIC ---

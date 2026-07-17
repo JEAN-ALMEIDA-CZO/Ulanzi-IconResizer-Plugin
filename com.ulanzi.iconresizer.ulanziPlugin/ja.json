@@ -162,7 +162,9 @@
     "anim_glitch": "グリッチ",
     "anim_heartbeat": "ハートビート",
     "anim_neon": "ネオン",
-    "toast_press": "Ulanzi IconResizer — パネルを開いてアイコンを作成"
+    "toast_press": "Ulanzi IconResizer — パネルを開いてアイコンを作成",
+    "bp_icon_size": "アイコンサイズ",
+    "bp_text_size": "テキストサイズ"
   },
   "Actions": [
     {

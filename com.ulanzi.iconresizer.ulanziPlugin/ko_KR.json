@@ -162,7 +162,9 @@
     "anim_glitch": "글리치",
     "anim_heartbeat": "하트비트",
     "anim_neon": "네온",
-    "toast_press": "Ulanzi IconResizer — 패널을 열어 아이콘을 만드세요"
+    "toast_press": "Ulanzi IconResizer — 패널을 열어 아이콘을 만드세요",
+    "bp_icon_size": "아이콘 크기",
+    "bp_text_size": "텍스트 크기"
   },
   "Actions": [
     {
