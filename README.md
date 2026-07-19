@@ -137,7 +137,7 @@ com.ulanzi.iconresizer.ulanziPlugin/
 ## 📄 License
 
 Released under the **MIT License** — see [LICENSE](com.ulanzi.iconresizer.ulanziPlugin/LICENSE).
-Bundled libraries and online services are credited in
+Bundled libraries and online services are credited in 
 [THIRD-PARTY-LICENSES.md](com.ulanzi.iconresizer.ulanziPlugin/THIRD-PARTY-LICENSES.md).
 
 ---
