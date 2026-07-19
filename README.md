@@ -1,3 +1,5 @@
+[![Available on Ulanzi Community Store](https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/docs/badges/ulanzi-community-store.svg)](https://ulanzicommunitystore.narlei.com)
+
 <!-- Banner -->
 <p align="center">
   <img src="com.ulanzi.iconresizer.ulanziPlugin/Banner_Ulanzi_IconResizer.jpeg" alt="Ulanzi IconResizer" width="100%">
